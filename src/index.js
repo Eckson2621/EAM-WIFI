@@ -18,7 +18,7 @@ async function supabaseFetch(env, path, options = {}, token = "") {
   headers.set("accept", "application/json");
   if (token) headers.set("authorization", `Bearer ${token}`);
   if (options.body && !headers.has("content-type")) headers.set("content-type", "application/json");
-  return fetch(`${env.SUPABASE_URL.replace(/\\/$/, "")}${path}`, { ...options, headers });
+  return fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}${path}`, { ...options, headers });
 }
 
 async function proxyAuth(request, env, path) {
