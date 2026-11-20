@@ -53,6 +53,73 @@ $("sim-reset").addEventListener("click", () => {
 
 
 
+
+async function sendSupportMessage(event) {
+  event.preventDefault();
+  if (!session?.access_token) {
+    $("support-feedback").textContent = "Please sign in first, then reopen Help to send your message.";
+    $("support-feedback").style.color = "#a33b32";
+    return;
+  }
+  const button = $("support-send");
+  button.disabled = true;
+  $("support-feedback").textContent = "Sending your message securely…";
+  try {
+    const memberships = await api("/api/organizations");
+    const active = memberships.find((m) => m.status === "active" && m.role === "owner");
+    await api("/api/support/messages", { method: "POST", body: JSON.stringify({
+      category: $("support-category").value,
+      subject: $("support-subject").value.trim(),
+      message: $("support-message").value.trim(),
+      organization_id: active?.organization_id || null
+    }) });
+    $("support-form").reset();
+    $("support-feedback").textContent = "Message sent to the Super Admin. Thank you.";
+    $("support-feedback").style.color = "#26734d";
+  } catch (error) {
+    $("support-feedback").textContent = error.message;
+    $("support-feedback").style.color = "#a33b32";
+  } finally { button.disabled = false; }
+}
+$("support-form").addEventListener("submit", sendSupportMessage);
+
+async function loadSupportInbox() {
+  const host = $("support-inbox");
+  if (!host) return;
+  host.textContent = "Loading messages…";
+  try {
+    const messages = await api("/api/support/messages");
+    host.replaceChildren();
+    const counts = { new: 0, read: 0, closed: 0 };
+    messages.forEach((m) => { counts[m.status] = (counts[m.status] || 0) + 1; });
+    $("support-inbox-summary").textContent = `New: ${counts.new} · Read: ${counts.read} · Closed: ${counts.closed} · Total shown: ${messages.length}`;
+    if (!messages.length) { host.textContent = "No support messages have been received yet."; return; }
+    messages.forEach((m) => {
+      const card = document.createElement("article"); card.className = "support-message-card";
+      const head = document.createElement("div"); head.className = "dashboard-head";
+      const title = document.createElement("strong"); title.textContent = m.subject;
+      const status = document.createElement("span"); status.className = "support-status status-" + m.status; status.textContent = m.status.toUpperCase();
+      head.append(title, status);
+      const org = Array.isArray(m.organization) ? m.organization[0]?.name : m.organization?.name;
+      const meta = document.createElement("p"); meta.className = "muted small";
+      meta.textContent = `${m.sender_name || "User"} · ${m.sender_email || m.user_id} · ${org || "No business selected"} · ${m.category.replaceAll("_"," ")} · ${new Date(m.created_at).toLocaleString()}`;
+      const body = document.createElement("p"); body.className = "support-message-body"; body.textContent = m.message;
+      const controls = document.createElement("div"); controls.className = "support-actions";
+      [["new","Mark new"],["read","Mark read"],["closed","Close message"]].forEach(([value,label]) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "secondary"; b.textContent = label; b.disabled = m.status === value;
+        b.addEventListener("click", async () => {
+          b.disabled = true;
+          try { await api("/api/support/messages", { method: "PATCH", body: JSON.stringify({ id: m.id, status: value }) }); await loadSupportInbox(); }
+          catch (error) { b.disabled = false; window.alert(error.message); }
+        });
+        controls.append(b);
+      });
+      card.append(head, meta, body, controls); host.append(card);
+    });
+  } catch (error) { host.textContent = "Could not load support inbox: " + error.message; $("support-inbox-summary").textContent = ""; }
+}
+$("support-refresh").addEventListener("click", loadSupportInbox);
+
 async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
   if (options.body) headers.set("content-type", "application/json");
@@ -122,7 +189,7 @@ async function loadWorkspace() {
   $("business-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("onboarding-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
-  if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformAccounts()]); }
+  if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformAccounts(), loadSupportInbox()]); }
   if (!memberships.length) {
     $("dashboard").classList.add("hidden");
     $("business-onboarding").classList.toggle("hidden", isPlatformAdmin);
@@ -452,7 +519,7 @@ $("business-back-admin").addEventListener("click", async () => {
   $("dashboard").classList.add("hidden");
   $("platform-admin").classList.remove("hidden");
   $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });
-  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);
+  await Promise.all([loadPlatformStats(), loadPlatformAccounts(), loadSupportInbox()]);
 });
 
 $("onboarding-back-admin").addEventListener("click", async () => {
