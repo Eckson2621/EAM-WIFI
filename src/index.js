@@ -224,9 +224,9 @@ async function handleApi(request, env) {
   if (path === "/api/chat/members" && request.method === "GET") {
     const organizationId = url.searchParams.get("organization_id");
     if (organizationId && !/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "Invalid organization_id." }, 400);
-    const query = new URLSearchParams({ select: "user_id,organization_id,role,status", status: "eq.active", order: "created_at.asc", limit: "500" });
-    if (organizationId) query.set("organization_id", `eq.${organizationId}`);
-    const upstream = await supabaseFetch(env, `/rest/v1/organization_members?${query}`, { method: "GET" }, token);
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/list_chat_members", {
+      method: "POST", body: JSON.stringify({ p_organization_id: organizationId || null })
+    }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
   if (path === "/api/chat/conversations" && request.method === "GET") {
