@@ -111,8 +111,46 @@ async function handleApi(request, env) {
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
 
+  // MikroTik device heartbeat: the router initiates outbound HTTPS; no inbound router port is required.
+  if (path === "/api/router/heartbeat" && request.method === "POST") {
+    const deviceToken = getToken(request);
+    if (!deviceToken || deviceToken.length < 32 || deviceToken.length > 200) {
+      return json({ error: "Router authentication required." }, 401);
+    }
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken));
+    const tokenHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/authenticate_router_device", {
+      method: "POST", body: JSON.stringify({ p_token_hash: tokenHash })
+    });
+    if (!upstream.ok) return json({ error: "Router authentication failed." }, 401);
+    const device = await upstream.json();
+    if (!device?.ok) return json({ error: "Router credential is invalid or expired." }, 401);
+    return json({ ok: true, device, next_poll_seconds: 15, capabilities: ["heartbeat"] });
+  }
+
   const token = getToken(request);
   if (!token) return json({ error: "Authentication required." }, 401);
+
+  if (path === "/api/router/pair" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const organizationId = String(input.organization_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "A valid organization_id is required." }, 400);
+    const random = new Uint8Array(32);
+    crypto.getRandomValues(random);
+    const deviceToken = Array.from(random, b => b.toString(16).padStart(2, "0")).join("");
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken));
+    const tokenHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/create_router_device_credential", {
+      method: "POST",
+      body: JSON.stringify({ p_organization_id: organizationId, p_token_hash: tokenHash, p_expires_at: expiresAt })
+    }, token);
+    const body = await upstream.text();
+    if (!upstream.ok) return new Response(body, { status: upstream.status, headers: JSON_HEADERS });
+    const pairing = JSON.parse(body || "null");
+    return json({ ok: true, device_token: deviceToken, expires_at: expiresAt, pairing });
+  }
 
   if (path === "/api/platform/admin/accounts" && request.method === "GET") {
     const query = new URLSearchParams({
