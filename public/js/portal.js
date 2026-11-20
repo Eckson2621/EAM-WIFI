@@ -33,6 +33,9 @@ async function loadPortal() {
   if (!data.router_ready) {
     $("redeem-button").disabled = true;
     showMessage("This hotspot's MikroTik router is not connected to EAM-WIFI yet. You can view packages and call the business, but voucher activation is not available yet.");
+  } else if (!mac) {
+    $("redeem-button").disabled = true;
+    showMessage("Open this page from the Wi-Fi login screen so the router can identify your device.");
   }
   const host = $("packages");
   host.replaceChildren();
