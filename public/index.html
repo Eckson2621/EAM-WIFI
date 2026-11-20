@@ -13,6 +13,7 @@
     <a class="brand" href="/">EAM-WIFI</a>
     <span class="tagline">Wi-Fi Hotspot Management</span>
     <span id="connection" class="status">Checking service…</span>
+    <button id="open-help" class="help-trigger hidden" type="button">Help / Msaada</button>
   </header>
   <main class="shell">
     <section class="hero">
@@ -20,7 +21,25 @@
       <h1>Manage your Wi-Fi business from one place.</h1>
       <p class="muted">Manage hotspot organizations, packages and customer access securely.</p>
     </section>
-    <section id="auth-panel" class="panel">
+
+    <section id="welcome-guide" class="panel guide-panel">
+      <p class="eyebrow">START HERE · ANZA HAPA</p>
+      <h2>Welcome to EAM-WIFI</h2>
+      <p class="muted">A short guide before you begin. Read it now or skip and return to it whenever you need help.</p>
+      <div class="guide-callout"><strong>Important · Muhimu</strong><p>EAM-WIFI manages Wi-Fi businesses, packages, vouchers and router integrations. Registering a router in the system does not connect a physical router automatically. Real internet access must be configured and tested on the actual router.</p></div>
+      <div class="guide-steps">
+        <article><span>01</span><div><strong>Create your account · Fungua akaunti</strong><p>Register with your email, password, owner name and business details. Keep your login details private.</p></div></article>
+        <article><span>02</span><div><strong>Register your Wi-Fi business · Sajili biashara</strong><p>Add your hotspot site, location and router reference details. Do not enter router passwords or API secrets into ordinary registration fields.</p></div></article>
+        <article><span>03</span><div><strong>Wait for platform approval · Subiri idhini</strong><p>Your business remains restricted until the platform administrator confirms the required subscription. The current reference price is TSh 6,000 per month.</p></div></article>
+        <article><span>04</span><div><strong>Set up packages and vouchers · Tengeneza vifurushi na vocha</strong><p>After approval, configure packages and issue vouchers only after confirming customer payment. Test with sample customers before serving real customers.</p></div></article>
+        <article><span>05</span><div><strong>Connect your router · Unganisha router</strong><p>For MikroTik, prepare RouterOS, Hotspot, a secure management method, firewall restrictions and the correct integration settings. Follow the router guide in the Help Centre. Never expose router management ports to the public internet.</p></div></article>
+        <article><span>06</span><div><strong>Test safely · Fanya majaribio</strong><p>Use the built-in router simulation to practise the workflow. Simulation is not proof that a real MikroTik router, captive portal or internet session works.</p></div></article>
+      </div>
+      <label class="guide-understood"><input id="guide-understood" type="checkbox"> I have read and understood the basic safety and setup information. / Nimesoma na kuelewa maelezo ya msingi.</label>
+      <div class="guide-actions"><button id="guide-confirm" class="primary" type="button" disabled>I understand, continue · Nimeelewa, endelea</button><button id="guide-skip" class="secondary" type="button">Skip for now · Ruka kwa sasa</button></div>
+      <p class="muted small">You can reopen this guide later from “Help / Msaada” at the top of the page.</p>
+    </section>
+    <section id="auth-panel" class="panel hidden">
       <div class="tabs">
         <button id="login-tab" class="tab active" type="button">Sign in</button>
         <button id="signup-tab" class="tab" type="button">Create account</button>
@@ -139,6 +158,21 @@
       <div id="organizations" class="stack"><p class="muted">Loading organizations…</p></div>
       <h3>Active Wi-Fi packages</h3>
       <div id="packages" class="stack"><p class="muted">Select an organization to view its packages.</p></div>
+
+      <section id="router-lab" class="router-lab">
+        <div class="dashboard-head"><div><p class="eyebrow">SAFE PRACTICE AREA</p><h3>Router connection practice</h3></div><span class="simulation-badge">SIMULATION ONLY</span></div>
+        <p class="muted">Practise the connection workflow without owning a MikroTik router. These actions run locally in this browser and do not contact or configure a physical router.</p>
+        <div class="simulation-status"><span id="sim-router-indicator" class="sim-dot"></span><div><strong id="sim-router-status">Router simulator: not connected</strong><small id="sim-router-detail">No real router connection has been tested.</small></div></div>
+        <div class="guide-steps compact-steps">
+          <article><span>1</span><div><strong>Prepare the router</strong><p>On a real MikroTik, confirm RouterOS version, LAN access, Hotspot configuration and a dedicated restricted integration account.</p></div></article>
+          <article><span>2</span><div><strong>Pair securely</strong><p>Use the approved pairing process and keep credentials in secure server-side storage. Do not share passwords in chat or public forms.</p></div></article>
+          <article><span>3</span><div><strong>Verify heartbeat</strong><p>The real device must report its identity and health to EAM-WIFI before it can be considered online.</p></div></article>
+          <article><span>4</span><div><strong>Test customer access</strong><p>Connect a test phone to the hotspot, redeem a test voucher and confirm internet access, expiry and session termination.</p></div></article>
+        </div>
+        <div class="simulation-actions"><button id="sim-heartbeat" class="primary" type="button">Run simulated heartbeat</button><button id="sim-reset" class="secondary" type="button">Reset simulation</button></div>
+        <p id="sim-message" class="message" role="status">Simulation has not been run.</p>
+      </section>
+
       <p class="muted small">Only records allowed by your Supabase account policies will be shown.</p>
     </section>
   </main>
