@@ -1,26 +1,23 @@
 # EAM-WIFI
 
-EAM-WIFI is a multi-tenant Wi-Fi hotspot management application by EAM VENTURES. This repository contains a Cloudflare Worker API and a lightweight browser interface connected to the existing Supabase project.
+EAM-WIFI is a multi-tenant Wi-Fi hotspot management application by EAM VENTURES. It uses Cloudflare Workers for the application API and static interface, and the existing Supabase project for authentication and data.
 
 ## Current foundation
 
-- Cloudflare Worker serves the browser application and API.
 - Supabase Auth email/password sign-up, sign-in and sign-out.
-- Authenticated organization membership lookup.
-- Active Wi-Fi package lookup scoped to an organization.
-- Supabase Row Level Security remains the authorization boundary: the Worker forwards the signed-in user's JWT and does not use a service-role key.
-- Basic automated tests for health and unauthenticated access.
+- Business onboarding for owner, business name, contact number, country, currency and timezone.
+- Hotspot site registration, including branch name and physical address.
+- Router metadata registration: brand, model, integration mode, optional LAN address and API port.
+- A transaction-safe Supabase RPC creates the organization, owner membership, user profile, hotspot site, router record and organization settings together.
+- Organization membership and Wi-Fi package lookup, scoped by the authenticated user's RLS permissions.
+- The Worker forwards the signed-in user's JWT and does not use a service-role key.
 
-## Supabase connection
-
-The public Supabase project URL and publishable API key are configured in `wrangler.toml`. A publishable key is intended for client-facing use; it is not a service-role secret. Never add a Supabase service-role/secret key, router password, or payment credential to this repository.
-
-The existing database project is:
+## Existing Supabase project
 
 - Project ref: `jrgmzajlmuqpslhhroez`
 - API URL: `https://jrgmzajlmuqpslhhroez.supabase.co`
 
-This app uses the existing tables `organization_members` and `wifi_packages`, and Supabase Auth. It does not create duplicate database tables.
+The application reuses the existing database schema; it does not create duplicate tables. The registration function is also stored in `database/register_wifi_business.sql`.
 
 ## Run locally
 
@@ -35,29 +32,41 @@ npm run dev
 ## Deploy to Cloudflare Workers
 
 1. Open Cloudflare Dashboard → Workers & Pages → Create application → Import a repository.
-2. Connect GitHub and choose `Eckson2621/EAM-WIFI`, branch `main`.
-3. Configure the project as a Worker using the repository's `wrangler.toml`.
-4. Build/deploy command: `npm run deploy` (Cloudflare may also deploy from the connected GitHub repository when Git integration is configured).
-5. After deployment, open the assigned `workers.dev` URL and test `/api/health`.
+2. Connect GitHub and select `Eckson2621/EAM-WIFI`, branch `main`.
+3. Configure the Worker using the repository's `wrangler.toml`.
+4. For automated deployment, add these GitHub repository Actions secrets:
+   - `CLOUDFLARE_API_TOKEN`: a Cloudflare API token with permission to edit Workers.
+   - `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID.
+5. Push to `main` or manually run the workflow from the Actions tab. It runs tests before deployment.
 
-Automatic deployment is configured through GitHub Actions in `.github/workflows/deploy.yml`. Before it can deploy, open GitHub repository Settings → Secrets and variables → Actions → New repository secret and add:\n\n- `CLOUDFLARE_API_TOKEN`: a Cloudflare API token with permission to edit Workers.\n- `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID.\n\nThen push to `main` or run the workflow manually from the Actions tab. The workflow runs tests before deployment. Do not paste either value into source files or chat. A live deployment is not yet confirmed; it will only happen after those two GitHub secrets are configured and the workflow succeeds.
+Never paste Cloudflare tokens, Supabase service-role keys, router passwords or payment secrets into source files, GitHub commits, browser code or chat. A live deployment is not confirmed until the workflow succeeds.
 
-## Important limitations in this first scaffold
+## Router connection status
 
-- Organization creation and owner/admin screens are not implemented yet.
-- Router secure pairing, live RouterOS control, captive portal, voucher redemption, payment collection, and router event processing are not implemented yet. Registration stores router metadata only; it does not connect the router. See `docs/router-connection.md`.
-- Access is limited by the existing Supabase grants and RLS policies. Test with real authenticated accounts from separate organizations before production use.
-- Browser sign-in state is held in session storage and is cleared on sign-out; this is a starter implementation, not a full production session-management design.
+Registration creates the router record but does **not** connect to the physical router. Router secure pairing, live RouterOS control, heartbeat/status updates, captive portal, voucher redemption, payment collection and router event processing are still to be built and tested.
+
+A private router address such as `192.168.88.1` cannot be reached directly from a public Cloudflare Worker. Do not expose an unrestricted router API port to the internet. The next integration step is a short-lived pairing flow and a router-side connector that initiates outbound HTTPS. See `docs/router-connection.md`.
+
+## Security status
+
+- The registration RPC is `SECURITY INVOKER`, so caller grants and RLS remain in force.
+- Only authenticated users can execute it; anonymous execution is revoked.
+- The registration operation is atomic: if any record insert fails, the transaction rolls back.
+- The router password/API secret is deliberately not collected or stored by the registration form.
+- Security Advisor returned zero lint findings after the registration RPC was added. Real authenticated cross-organization tests and router pairing tests are still required before production use.
 
 ## Repository layout
 
 ```text
-src/index.js             Cloudflare Worker API\ndatabase/register_wifi_business.sql  Atomic registration RPC\ndocs/router-connection.md  Secure router pairing plan
-public/index.html        Browser application
-public/css/style.css     Application styles
-public/js/app.js         Browser authentication and workspace UI
-tests/worker.test.js     Basic Worker tests\n.github/workflows/deploy.yml  Test and deploy workflow
-wrangler.toml            Cloudflare Worker and static asset configuration
-package.json             Scripts and pinned Wrangler development dependency
-.dev.vars.example        Local environment variable template
+src/index.js                         Cloudflare Worker API
+public/index.html                    Browser application and onboarding form
+public/css/style.css                 Application styles
+public/js/app.js                     Authentication and onboarding logic
+database/register_wifi_business.sql  Atomic Supabase registration RPC
+docs/router-connection.md            Secure router pairing plan
+tests/worker.test.js                 Basic Worker tests
+.github/workflows/deploy.yml         Test and deploy workflow
+wrangler.toml                        Cloudflare Worker configuration
+package.json                         Scripts and Wrangler dependency
+.dev.vars.example                    Local environment template
 ```
