@@ -152,6 +152,13 @@ async function handleApi(request, env) {
     return json({ ok: true, device_token: deviceToken, expires_at: expiresAt, pairing });
   }
 
+  if (path === "/api/platform/admin/dashboard" && request.method === "GET") {
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_dashboard_stats", {
+      method: "POST", body: "{}"
+    }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
   if (path === "/api/platform/admin/accounts" && request.method === "GET") {
     const query = new URLSearchParams({
       select: "id,name,slug,contact_phone,status,created_at,platform_subscriptions(status,expires_at)",
