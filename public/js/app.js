@@ -385,6 +385,14 @@ $("onboarding-signout").addEventListener("click", signOut);
 $("platform-signout").addEventListener("click", signOut);
 
 (async function init() {
+  // Always start in a clean signed-out state. A platform-admin panel must
+  // never remain visible from a previous page/session render.
+  $("auth-panel").classList.remove("hidden");
+  $("business-onboarding").classList.add("hidden");
+  $("dashboard").classList.add("hidden");
+  $("platform-admin").classList.add("hidden");
+  $("auth-message").textContent = "";
+  saveSession(null);
   try {
     const health = await api("/api/health");
     $("connection").textContent = health.ok ? "Service online" : "Service unavailable";
