@@ -69,6 +69,9 @@ async function loadWorkspace() {
   if (profile.business_name) prefill("site_name", profile.business_name + " Hotspot");
   $("auth-panel").classList.add("hidden");
   const isPlatformAdmin = (user.email || "").toLowerCase() === "mwalimueckson2104@gmail.com";
+  const ownsBusiness = memberships.some((membership) => membership.role === "owner" && membership.status === "active");
+  $("admin-open-business").classList.toggle("hidden", !(isPlatformAdmin && ownsBusiness));
+  $("business-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("onboarding-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
   if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformAccounts()]); }
@@ -79,7 +82,8 @@ async function loadWorkspace() {
   }
   $("business-onboarding").classList.add("hidden");
   $("dashboard").classList.remove("hidden");
-  $("welcome").textContent = user.email || "Your workspace";
+  if (isPlatformAdmin) $("dashboard").classList.add("hidden");
+  $("welcome").textContent = memberships.find((membership) => membership.role === "owner")?.organization?.name || "Your Wi-Fi business";
   const notice = $("subscription-notice");
   notice.classList.add("hidden");
   const host = $("organizations");
@@ -389,7 +393,7 @@ async function loadPackages(organizationId, role = "operator") {
 }
 
 
-$("onboarding-back-admin").addEventListener("click", async () => {\n  $("business-onboarding").classList.add("hidden");\n  $("dashboard").classList.add("hidden");\n  $("platform-admin").classList.remove("hidden");\n  $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });\n  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);\n});\n\n$("admin-register-business").addEventListener("click", () => {
+$("admin-open-business").addEventListener("click", () => {\n  $("platform-admin").classList.add("hidden");\n  $("business-onboarding").classList.add("hidden");\n  $("dashboard").classList.remove("hidden");\n  $("dashboard").scrollIntoView({ behavior: "smooth", block: "start" });\n});\n\n$("business-back-admin").addEventListener("click", async () => {\n  $("dashboard").classList.add("hidden");\n  $("platform-admin").classList.remove("hidden");\n  $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });\n  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);\n});\n\n$("onboarding-back-admin").addEventListener("click", async () => {\n  $("business-onboarding").classList.add("hidden");\n  $("dashboard").classList.add("hidden");\n  $("platform-admin").classList.remove("hidden");\n  $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });\n  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);\n});\n\n$("admin-register-business").addEventListener("click", () => {
   $("platform-admin").classList.add("hidden");
   $("dashboard").classList.add("hidden");
   $("business-onboarding").classList.remove("hidden");
