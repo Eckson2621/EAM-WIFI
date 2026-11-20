@@ -96,55 +96,104 @@ async function loadPackages(organizationId, role = "operator") {
 
       if (["owner", "admin"].includes(role)) {
         const voucherPanel = document.createElement("div");
-        voucherPanel.className = "stack";
-        const quantity = document.createElement("input");
-        quantity.type = "number";
-        quantity.min = "1";
-        quantity.max = "500";
-        quantity.step = "1";
-        quantity.value = "10";
-        quantity.setAttribute("aria-label", "Number of vouchers to generate");
-        const generate = document.createElement("button");
-        generate.type = "button";
-        generate.className = "secondary";
-        generate.textContent = "Generate vouchers";
+        voucherPanel.className = "stack voucher-issue";
+        const phone = document.createElement("input");
+        phone.type = "tel";
+        phone.placeholder = "Customer phone (optional)";
+        phone.setAttribute("aria-label", "Customer phone number");
+        const amount = document.createElement("input");
+        amount.type = "number";
+        amount.min = "1";
+        amount.step = "1";
+        amount.value = String(Number(item.price_tzs || 0));
+        amount.setAttribute("aria-label", "Amount received in TZS");
+        const method = document.createElement("select");
+        method.setAttribute("aria-label", "Payment method");
+        [
+          ["cash", "Cash"],
+          ["mobile_money", "Mobile money"],
+          ["bank_transfer", "Bank transfer"],
+          ["other", "Other"]
+        ].forEach(([value, label]) => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = label;
+          method.append(option);
+        });
+        const reference = document.createElement("input");
+        reference.type = "text";
+        reference.maxLength = 120;
+        reference.placeholder = "Payment reference (optional)";
+        reference.setAttribute("aria-label", "Payment reference");
+        const issue = document.createElement("button");
+        issue.type = "button";
+        issue.className = "secondary";
+        issue.textContent = "Confirm payment and issue ONE voucher";
         const message = document.createElement("small");
         message.className = "muted";
-        const codes = document.createElement("textarea");
-        codes.readOnly = true;
-        codes.hidden = true;
-        codes.rows = 5;
-        codes.setAttribute("aria-label", "New voucher codes. Save them now; they cannot be retrieved again.");
-        generate.addEventListener("click", async () => {
-          const count = Number(quantity.value);
-          if (!Number.isInteger(count) || count < 1 || count > 500) {
-            message.textContent = "Enter a whole number from 1 to 500.";
+        const code = document.createElement("input");
+        code.readOnly = true;
+        code.hidden = true;
+        code.setAttribute("aria-label", "New voucher code");
+        code.className = "voucher-code";
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "secondary";
+        copy.textContent = "Copy voucher code";
+        copy.hidden = true;
+        copy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(code.value);
+            message.textContent = "Voucher copied. Give this code to the customer.";
+          } catch {
+            code.focus();
+            code.select();
+            message.textContent = "Select and copy the voucher code manually.";
+          }
+        });
+        issue.addEventListener("click", async () => {
+          const paid = Number(amount.value);
+          if (!Number.isSafeInteger(paid) || paid < 1) {
+            message.textContent = "Enter the amount actually received.";
             return;
           }
-          generate.disabled = true;
-          message.textContent = "Generating unique vouchers…";
-          codes.hidden = true;
+          if (paid !== Number(item.price_tzs)) {
+            message.textContent = "The amount must exactly match this package price.";
+            return;
+          }
+          if (!window.confirm("Confirm that you have received the full payment for this package. A new one-time voucher will be issued.")) return;
+          issue.disabled = true;
+          code.hidden = true;
+          copy.hidden = true;
+          message.textContent = "Recording payment and issuing one unique voucher…";
           try {
-            const result = await api("/api/vouchers/generate", {
+            const result = await api("/api/vouchers/issue-paid", {
               method: "POST",
               body: JSON.stringify({
                 organization_id: organizationId,
                 package_id: item.id,
-                quantity: count
+                amount_paid: paid,
+                payment_method: method.value,
+                customer_phone: phone.value.trim() || null,
+                payment_reference: reference.value.trim() || null
               })
             });
-            const generated = Array.isArray(result.codes) ? result.codes : [];
-            if (generated.length !== count) throw new Error("The server did not return the expected number of vouchers.");
-            codes.value = generated.map((voucher) => voucher.code).join("\n");
-            codes.hidden = false;
-            message.textContent = `${generated.length} unique vouchers created. Copy or save these codes now; they will not be shown again.`;
+            if (!result.code || !/^EW[A-F0-9]{24}$/.test(result.code)) {
+              throw new Error("The server did not return a valid voucher code. Contact support before retrying.");
+            }
+            code.value = result.code;
+            code.hidden = false;
+            copy.hidden = false;
+            message.textContent = "Payment recorded. Give this code to the customer now. The full code will not be shown again.";
+            phone.value = "";
+            reference.value = "";
           } catch (error) {
             message.textContent = error.message;
           } finally {
-            generate.disabled = false;
+            issue.disabled = false;
           }
         });
-        voucherPanel.append(quantity, generate, message, codes);
+        voucherPanel.append(phone, amount, method, reference, issue, message, code, copy);
         card.append(voucherPanel);
       }
       host.append(card);
