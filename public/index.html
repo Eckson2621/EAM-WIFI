@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b33">
   <title>EAM-WIFI | Hotspot Management</title>
   <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/app.js?v=20261120-2" defer></script>
+  <script src="/js/app.js?v=20261120-3" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -83,10 +83,22 @@
     </section>
     <section id="platform-admin" class="panel hidden">
       <div class="dashboard-head">
-        <div><p class="eyebrow">PLATFORM ADMIN</p><h2>Business subscriptions</h2></div>
+        <div><p class="eyebrow">SUPER ADMIN CONTROL CENTER</p><h2>Platform dashboard</h2></div>
         <button id="platform-signout" class="secondary" type="button">Log out</button>
       </div>
-      <p class="muted">Confirm the owner's monthly payment of TSh 6,000 after speaking with them. Approval activates the business for one month.</p>
+      <div class="admin-stats" id="platform-stats">
+        <div class="stat-card"><span>Total businesses</span><strong id="stat-businesses">—</strong></div>
+        <div class="stat-card"><span>Active businesses</span><strong id="stat-active">—</strong></div>
+        <div class="stat-card"><span>Pending businesses</span><strong id="stat-pending">—</strong></div>
+        <div class="stat-card"><span>Hotspot sites</span><strong id="stat-sites">—</strong></div>
+        <div class="stat-card"><span>Routers online / total</span><strong id="stat-routers">—</strong></div>
+        <div class="stat-card"><span>Wi-Fi customers</span><strong id="stat-customers">—</strong></div>
+        <div class="stat-card"><span>Vouchers issued</span><strong id="stat-vouchers">—</strong></div>
+        <div class="stat-card"><span>Live sessions</span><strong id="stat-sessions">—</strong></div>
+        <div class="stat-card"><span>Subscription revenue this month</span><strong id="stat-month-revenue">TZS —</strong></div>
+        <div class="stat-card"><span>All-time subscription revenue</span><strong id="stat-total-revenue">TZS —</strong></div>
+      </div>
+      <div class="admin-section-head"><h3>Business subscriptions</h3><p class="muted">Confirm the owner's monthly payment of TSh 6,000 after speaking with them. Approval activates the business for one month.</p></div>
       <div id="platform-accounts" class="stack"><p class="muted">Loading business accounts…</p></div>
       <p id="platform-admin-message" class="message" role="status"></p>
     </section>
