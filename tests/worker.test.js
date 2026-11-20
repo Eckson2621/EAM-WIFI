@@ -23,3 +23,12 @@ test("business registration endpoint rejects unauthenticated requests", async ()
   }), {});
   assert.equal(response.status, 401);
 });
+
+test("voucher generation endpoint rejects unauthenticated requests", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/vouchers/generate", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ organization_id: "00000000-0000-0000-0000-000000000001", package_id: "00000000-0000-0000-0000-000000000002", quantity: 10 })
+  }), {});
+  assert.equal(response.status, 401);
+});
