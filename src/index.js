@@ -86,6 +86,39 @@ async function handleApi(request, env) {
   const token = getToken(request);
   if (!token) return json({ error: "Authentication required." }, 401);
 
+  if (path === "/api/vouchers/issue-paid" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const organizationId = String(input.organization_id || "");
+    const packageId = String(input.package_id || "");
+    const amountPaid = Number(input.amount_paid);
+    const paymentMethod = String(input.payment_method || "");
+    if (!/^[0-9a-f-]{36}$/i.test(organizationId) || !/^[0-9a-f-]{36}$/i.test(packageId)) {
+      return json({ error: "Valid organization_id and package_id are required." }, 400);
+    }
+    if (!Number.isSafeInteger(amountPaid) || amountPaid < 1) {
+      return json({ error: "A valid amount paid is required." }, 400);
+    }
+    if (!["cash", "mobile_money", "bank_transfer", "other"].includes(paymentMethod)) {
+      return json({ error: "Select a valid payment method." }, 400);
+    }
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/issue_paid_wifi_voucher", {
+      method: "POST",
+      body: JSON.stringify({
+        p_organization_id: organizationId,
+        p_package_id: packageId,
+        p_amount_paid: amountPaid,
+        p_payment_method: paymentMethod,
+        p_customer_phone: input.customer_phone || null,
+        p_payment_reference: input.payment_reference || null
+      })
+    }, token);
+    return new Response(await upstream.text(), {
+      status: upstream.status,
+      headers: { ...JSON_HEADERS, "cache-control": "no-store" }
+    });
+  }
+
   if (path === "/api/vouchers/generate" && request.method === "POST") {
     let input;
     try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
