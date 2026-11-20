@@ -39,14 +39,19 @@ async function loadWorkspace() {
   const user = await api("/api/auth/user");
   const memberships = await api("/api/organizations");
   $("auth-panel").classList.add("hidden");
+  const isPlatformAdmin = (user.email || "").toLowerCase() === "mwalimueckson2104@gmail.com";
+  $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
+  if (isPlatformAdmin) await loadPlatformAccounts();
   if (!memberships.length) {
     $("dashboard").classList.add("hidden");
-    $("business-onboarding").classList.remove("hidden");
+    $("business-onboarding").classList.toggle("hidden", isPlatformAdmin);
     return;
   }
   $("business-onboarding").classList.add("hidden");
   $("dashboard").classList.remove("hidden");
   $("welcome").textContent = user.email || "Your workspace";
+  const notice = $("subscription-notice");
+  notice.classList.add("hidden");
   const host = $("organizations");
   host.replaceChildren();
   $("packages").innerHTML = '<p class="muted">Choose an organization to view packages.</p>';
@@ -59,6 +64,23 @@ async function loadWorkspace() {
     const meta = document.createElement("small");
     const orgStatus = membership.organization?.status || "unknown";
     meta.textContent = `Role: ${membership.role} · Membership: ${membership.status} · Business: ${orgStatus}`;
+    if (membership.role === "owner" || membership.role === "admin") {
+      try {
+        const sub = await api(`/api/platform/subscription?organization_id=${encodeURIComponent(membership.organization_id)}`);
+        if (!sub.active) {
+          notice.classList.remove("hidden");
+          notice.textContent = sub.status === "expired"
+            ? "Your EAM-WIFI subscription has expired. Monthly renewal is TSh 6,000. Please call the platform administrator and confirm payment to reactivate your business."
+            : "Your business registration is waiting for payment approval. The EAM-WIFI platform subscription is TSh 6,000 per month. Please call the platform administrator; access starts after payment is confirmed.";
+        } else {
+          notice.classList.remove("hidden");
+          notice.textContent = `Your EAM-WIFI subscription is active until ${new Date(sub.expires_at).toLocaleString()}.`;
+        }
+      } catch (error) {
+        notice.classList.remove("hidden");
+        notice.textContent = "Subscription status could not be checked. Please contact EAM-WIFI support before issuing vouchers.";
+      }
+    }
     info.append(name, meta);
     const button = document.createElement("button");
     button.type = "button";
@@ -69,6 +91,70 @@ async function loadWorkspace() {
     card.append(info, button);
     host.append(card);
   });
+}
+
+async function loadPlatformAccounts() {
+  const host = $("platform-accounts");
+  if (!host) return;
+  host.textContent = "Loading business accounts…";
+  try {
+    const accounts = await api("/api/platform/admin/accounts");
+    host.replaceChildren();
+    if (!accounts.length) {
+      host.textContent = "No business registrations yet.";
+      return;
+    }
+    accounts.forEach((account) => {
+      const card = document.createElement("div");
+      card.className = "item";
+      const info = document.createElement("div");
+      const name = document.createElement("strong");
+      name.textContent = account.name;
+      const sub = account.platform_subscriptions;
+      const state = sub?.status || account.status || "pending";
+      const expiry = sub?.expires_at ? ` · Expires ${new Date(sub.expires_at).toLocaleDateString()}` : "";
+      const meta = document.createElement("small");
+      meta.textContent = `${account.contact_phone || "No phone"} · Business: ${account.status} · Subscription: ${state}${expiry}`;
+      info.append(name, meta);
+      const controls = document.createElement("div");
+      controls.className = "stack";
+      const method = document.createElement("select");
+      [["cash","Cash"],["mobile_money","Mobile money"],["bank_transfer","Bank transfer"],["other","Other"]].forEach(([value,label]) => {
+        const option = document.createElement("option");
+        option.value = value; option.textContent = label; method.append(option);
+      });
+      const reference = document.createElement("input");
+      reference.placeholder = "Payment reference (optional)";
+      reference.maxLength = 120;
+      const approve = document.createElement("button");
+      approve.type = "button";
+      approve.className = "secondary";
+      approve.textContent = "Confirm TSh 6,000 and approve 1 month";
+      const message = document.createElement("small");
+      message.className = "muted";
+      approve.addEventListener("click", async () => {
+        if (!window.confirm(`Confirm that ${account.name} has paid TSh 6,000 for one month?`)) return;
+        approve.disabled = true;
+        message.textContent = "Approving subscription…";
+        try {
+          const result = await api("/api/platform/admin/approve", {
+            method: "POST",
+            body: JSON.stringify({ organization_id: account.id, payment_method: method.value, payment_reference: reference.value.trim() || null })
+          });
+          message.textContent = `Approved. Access active until ${new Date(result.expires_at).toLocaleString()}.`;
+          await loadPlatformAccounts();
+        } catch (error) {
+          message.textContent = error.message;
+          approve.disabled = false;
+        }
+      });
+      controls.append(method, reference, approve, message);
+      card.append(info, controls);
+      host.append(card);
+    });
+  } catch (error) {
+    host.textContent = error.message;
+  }
 }
 
 async function loadPackages(organizationId, role = "operator") {
@@ -218,7 +304,7 @@ $("business-form").addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify(values)
     });
-    $("business-message").textContent = "Registration submitted. Your business is pending approval; the router is recorded but not connected yet. Next step: secure router pairing.";
+    $("business-message").textContent = "Registration submitted. Call the EAM-WIFI platform administrator to discuss and confirm your TSh 6,000 monthly subscription. Your business remains locked until payment is approved. The router is registered but not connected yet.";
     $("business-message").style.color = "#26734d";
     event.currentTarget.reset();
     await loadWorkspace();
