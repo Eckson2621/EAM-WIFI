@@ -219,6 +219,92 @@ async function handleApi(request, env) {
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
 
+
+  // Secure in-app chat. Supabase RLS remains the authority for every row.
+  if (path === "/api/chat/members" && request.method === "GET") {
+    const organizationId = url.searchParams.get("organization_id");
+    if (organizationId && !/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "Invalid organization_id." }, 400);
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/list_chat_members", {
+      method: "POST", body: JSON.stringify({ p_organization_id: organizationId || null })
+    }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+  if (path === "/api/chat/conversations" && request.method === "GET") {
+    const query = new URLSearchParams({ select: "id,organization_id,conversation_type,title,created_by,created_at,updated_at", order: "updated_at.desc", limit: "100" });
+    const upstream = await supabaseFetch(env, `/rest/v1/chat_conversations?${query}`, { method: "GET" }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+  if (path === "/api/chat/conversations" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const type = String(input.conversation_type || "");
+    const organizationId = input.organization_id ? String(input.organization_id) : null;
+    const title = String(input.title || "").trim().slice(0, 120) || null;
+    const recipients = Array.isArray(input.user_ids) ? [...new Set(input.user_ids.map(String))] : [];
+    if (!["direct", "group", "broadcast"].includes(type)) return json({ error: "Invalid conversation type." }, 400);
+    if (type !== "broadcast" && !/^[0-9a-f-]{36}$/i.test(organizationId || "")) return json({ error: "Choose a valid business." }, 400);
+    if (type === "broadcast" && recipients.length === 0) return json({ error: "Choose at least one broadcast recipient." }, 400);
+    if (recipients.length > 100 || recipients.some(id => !/^[0-9a-f-]{36}$/i.test(id))) return json({ error: "Invalid or too many recipients (maximum 100)." }, 400);
+    if (type === "direct" && recipients.length !== 1) return json({ error: "A private chat requires exactly one other participant." }, 400);
+    if (type === "group" && recipients.length < 1) return json({ error: "Choose at least one group participant." }, 400);
+    const authResponse = await supabaseFetch(env, "/auth/v1/user", { method: "GET" }, token);
+    if (!authResponse.ok) return json({ error: "Your session has expired. Sign in again." }, 401);
+    const authUser = await authResponse.json();
+    const created = await supabaseFetch(env, "/rest/v1/chat_conversations?select=id,organization_id,conversation_type,title,created_by,created_at,updated_at", {
+      method: "POST", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ organization_id: type === "broadcast" ? null : organizationId, conversation_type: type, title, created_by: authUser.id })
+    }, token);
+    const createdBody = await created.text();
+    if (!created.ok) return new Response(createdBody, { status: created.status, headers: JSON_HEADERS });
+    const conversation = JSON.parse(createdBody || "[]")[0];
+    if (!conversation?.id) return json({ error: "Conversation could not be created." }, 502);
+    const rows = recipients.filter(id => id !== authUser.id).map(user_id => ({ conversation_id: conversation.id, user_id, added_by: authUser.id }));
+    if (rows.length) {
+      const add = await supabaseFetch(env, "/rest/v1/chat_participants", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(rows) }, token);
+      if (!add.ok) {
+        const detail = await add.text();
+        await supabaseFetch(env, `/rest/v1/chat_conversations?id=eq.${conversation.id}`, { method: "DELETE" }, token);
+        return new Response(detail, { status: add.status, headers: JSON_HEADERS });
+      }
+    }
+    return json(conversation, 201);
+  }
+  if (path === "/api/chat/messages" && request.method === "GET") {
+    const conversationId = String(url.searchParams.get("conversation_id") || "");
+    if (!/^[0-9a-f-]{36}$/i.test(conversationId)) return json({ error: "A valid conversation is required." }, 400);
+    const query = new URLSearchParams({ select: "id,conversation_id,sender_id,message_type,body,created_at,edited_at,deleted_at", conversation_id: `eq.${conversationId}`, order: "created_at.asc", limit: "200" });
+    const upstream = await supabaseFetch(env, `/rest/v1/chat_messages?${query}`, { method: "GET" }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+  if (path === "/api/chat/messages" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const conversationId = String(input.conversation_id || "");
+    const body = String(input.body || "").trim();
+    if (!/^[0-9a-f-]{36}$/i.test(conversationId)) return json({ error: "A valid conversation is required." }, 400);
+    if (!body || body.length > 5000) return json({ error: "Message must contain 1–5,000 characters." }, 400);
+    const authResponse = await supabaseFetch(env, "/auth/v1/user", { method: "GET" }, token);
+    if (!authResponse.ok) return json({ error: "Your session has expired. Sign in again." }, 401);
+    const authUser = await authResponse.json();
+    const upstream = await supabaseFetch(env, "/rest/v1/chat_messages?select=id,conversation_id,sender_id,message_type,body,created_at", {
+      method: "POST", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ conversation_id: conversationId, sender_id: authUser.id, message_type: "text", body })
+    }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+  if (path === "/api/chat/read" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const conversationId = String(input.conversation_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(conversationId)) return json({ error: "A valid conversation is required." }, 400);
+    const authResponse = await supabaseFetch(env, "/auth/v1/user", { method: "GET" }, token);
+    if (!authResponse.ok) return json({ error: "Your session has expired. Sign in again." }, 401);
+    const authUser = await authResponse.json();
+    const query = new URLSearchParams({ conversation_id: `eq.${conversationId}`, user_id: `eq.${authUser.id}` });
+    const upstream = await supabaseFetch(env, `/rest/v1/chat_participants?${query}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ last_read_at: new Date().toISOString() }) }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
   if (path === "/api/platform/admin/dashboard" && request.method === "GET") {
     const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_dashboard_stats", {
       method: "POST", body: "{}"

@@ -122,3 +122,22 @@
 .support-reply-form{display:grid;gap:8px;max-width:none;margin-top:10px}
 .support-reply-form textarea{width:100%;resize:vertical;min-height:58px;padding:10px;border:1px solid #cfd8e6;border-radius:9px;font:inherit}
 .support-reply-form button{justify-self:start}
+
+/* In-app messaging */
+.chat-layout{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.5fr);gap:14px;min-width:0}
+.chat-sidebar,.chat-thread{min-width:0;border:1px solid #e1e8f2;border-radius:13px;padding:13px;background:#fbfcff}
+.chat-sidebar h3{margin:4px 0 12px!important}.chat-conversations{display:grid;gap:7px;max-height:310px;overflow:auto}
+.chat-conversation{width:100%;text-align:left;border:1px solid #e0e6f0;background:#fff;border-radius:9px;padding:10px;cursor:pointer;color:#233451}
+.chat-conversation.active{border-color:#7d9ce7;background:#edf3ff}.chat-conversation strong,.chat-conversation small{display:block;overflow-wrap:anywhere}
+.chat-conversation small{color:#77839a;margin-top:4px}.chat-new{border-top:1px solid #e1e8f2;margin-top:15px;padding-top:12px}
+.chat-new label{margin:10px 0;font-size:.82rem}.chat-new select,.chat-new input{width:100%;min-width:0;padding:10px;border:1px solid #cfd8e6;border-radius:8px;background:#fff;font:inherit}
+.chat-new select[multiple]{min-height:110px}.chat-thread{display:flex;flex-direction:column;min-height:520px}
+.chat-thread-head{padding:6px 4px 12px;border-bottom:1px solid #e3e9f2}.chat-thread-head small{display:block;color:#75829a;margin-top:4px}
+.chat-messages{display:flex;flex-direction:column;gap:9px;flex:1;min-height:280px;max-height:520px;overflow:auto;padding:12px 2px}
+.chat-bubble{max-width:min(88%,520px);padding:10px 12px;border-radius:12px;background:#eef2f8;align-self:flex-start;overflow-wrap:anywhere}
+.chat-bubble.mine{align-self:flex-end;background:#e7efff}.chat-bubble p{white-space:pre-wrap;margin:0;line-height:1.5}
+.chat-bubble small{display:block;margin-top:5px;color:#77839a;font-size:.68rem}
+.chat-send-form{display:flex;align-items:flex-end;gap:8px;max-width:none;border-top:1px solid #e3e9f2;padding-top:12px}
+.chat-send-form textarea{flex:1;min-width:0;resize:vertical;padding:11px;border:1px solid #cfd8e6;border-radius:9px;font:inherit}
+.chat-send-form button{flex:0 0 auto}
+@media(max-width:700px){.chat-layout{grid-template-columns:1fr}.chat-thread{min-height:430px}.chat-conversations{max-height:180px}.chat-thread-head{position:sticky;top:0;background:#fbfcff}}

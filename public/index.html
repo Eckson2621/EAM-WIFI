@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#101b33">
   <title>EAM-WIFI | Hotspot Management</title>
   <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/app.js?v=20261121-02" defer></script>
+  <script src="/js/app.js?v=20261121-03" defer></script>
+  <script src="/js/chat.js?v=20261121-01" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -200,6 +201,28 @@
       </section>
 
       <p class="muted small">Only records allowed by your Supabase account policies will be shown.</p>
+    </section>
+
+    <section id="chat-panel" class="panel hidden">
+      <div class="dashboard-head"><div><p class="eyebrow">EAM WIFI MESSAGING</p><h2>Messages · Mawasiliano</h2></div><button id="chat-refresh" class="secondary" type="button">Refresh</button></div>
+      <p class="muted small">Private chats and groups are visible only to participants. Broadcast creation is restricted to Super Admin.</p>
+      <div class="chat-layout">
+        <aside class="chat-sidebar"><h3>Conversations</h3><div id="chat-conversations" class="chat-conversations"><p class="muted small">Loading conversations…</p></div>
+          <div class="chat-new"><h3>Start conversation</h3>
+            <label>Type<select id="chat-type"><option value="direct">Private chat</option><option value="group">Group chat</option><option value="broadcast" id="chat-broadcast-option" disabled>Super Admin broadcast</option></select></label>
+            <label id="chat-org-wrap">Business<select id="chat-organization"><option value="">Choose business</option></select></label>
+            <label>Group / broadcast title (optional)<input id="chat-title" maxlength="120" placeholder="e.g. Network team"></label>
+            <label>Participants<select id="chat-recipients" multiple size="5" aria-label="Choose participants"></select></label>
+            <p class="muted small">Choose one person for a private chat, or several for a group.</p>
+            <button id="chat-create" class="primary" type="button">Create conversation</button><p id="chat-create-feedback" class="message" role="status"></p>
+          </div>
+        </aside>
+        <section class="chat-thread"><div id="chat-thread-head" class="chat-thread-head"><strong>Select a conversation</strong></div>
+          <div id="chat-messages" class="chat-messages"><p class="muted small">Your messages will appear here.</p></div>
+          <form id="chat-send-form" class="chat-send-form"><textarea id="chat-message-input" rows="2" maxlength="5000" placeholder="Write a message…" required disabled></textarea><button id="chat-send" class="primary" type="submit" disabled>Send</button></form>
+          <p id="chat-feedback" class="message" role="status"></p>
+        </section>
+      </div>
     </section>
   </main>
   <footer>© <span id="year"></span> EAM VENTURES · EAM-WIFI</footer>

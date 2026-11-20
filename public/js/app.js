@@ -258,6 +258,7 @@ function setPlatformCallNotice(element, message) {
 async function loadWorkspace() {
   const user = await api("/api/auth/user");
   const memberships = await api("/api/organizations");
+  if (window.EAMChat) await window.EAMChat.start(user, memberships);
   const profile = user.user_metadata || {};
   const prefill = (name, value) => {
     const field = $("business-form")?.elements.namedItem(name);
@@ -699,6 +700,7 @@ async function signOut() {
     // Always clear the browser session, even if the network is unavailable.
   }
   saveSession(null);
+  $("chat-panel").classList.add("hidden");
   $("business-onboarding").classList.add("hidden");
   $("dashboard").classList.add("hidden");
   $("platform-admin").classList.add("hidden");
@@ -720,6 +722,7 @@ $("platform-signout").addEventListener("click", signOut);
   $("business-onboarding").classList.add("hidden");
   $("dashboard").classList.add("hidden");
   $("platform-admin").classList.add("hidden");
+  $("chat-panel").classList.add("hidden");
   $("auth-message").textContent = "";
   const savedSession = guideCompleted ? sessionStorage.getItem("eamwifi_session") : null;
   try {

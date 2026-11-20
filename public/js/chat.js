@@ -1,0 +1,234 @@
+(() => {
+  const $ = (id) => document.getElementById(id);
+  let currentUser = null;
+  let memberships = [];
+  let conversations = [];
+  let activeConversation = null;
+  let refreshTimer = null;
+  let initialized = false;
+
+  async function api(path, options = {}) {
+    const saved = sessionStorage.getItem("eamwifi_session");
+    const session = saved ? JSON.parse(saved) : null;
+    if (!session?.access_token) throw new Error("Please sign in again.");
+    const headers = new Headers(options.headers || {});
+    headers.set("authorization", "Bearer " + session.access_token);
+    if (options.body) headers.set("content-type", "application/json");
+    const response = await fetch(path, { ...options, headers });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || data.msg || data.error_description || data.error || "Request failed (" + response.status + ")");
+    return data;
+  }
+
+  function selectedValues(select) {
+    return Array.from(select.selectedOptions).map(option => option.value).filter(Boolean);
+  }
+
+  function setFeedback(id, message, isError = true) {
+    const node = $(id);
+    if (!node) return;
+    node.textContent = message;
+    node.style.color = isError ? "#a33b32" : "#26734d";
+  }
+
+  async function loadMembers() {
+    const type = $("chat-type").value;
+    const orgId = $("chat-organization").value;
+    const recipientSelect = $("chat-recipients");
+    recipientSelect.replaceChildren();
+    if (type !== "broadcast" && !orgId) return;
+    const members = await api("/api/chat/members" + (type === "broadcast" ? "" : "?organization_id=" + encodeURIComponent(orgId)));
+    const unique = new Map();
+    members.forEach(member => {
+      if (member.user_id !== currentUser.id) unique.set(member.user_id, member);
+    });
+    unique.forEach(member => {
+      const option = document.createElement("option");
+      option.value = member.user_id;
+      option.textContent = (member.role || "member") + " · " + member.user_id.slice(0, 8);
+      recipientSelect.append(option);
+    });
+    if (!recipientSelect.options.length) {
+      const option = document.createElement("option");
+      option.disabled = true;
+      option.textContent = "No other active members found";
+      recipientSelect.append(option);
+    }
+  }
+
+  async function loadConversations() {
+    const host = $("chat-conversations");
+    const list = await api("/api/chat/conversations");
+    conversations = Array.isArray(list) ? list : [];
+    host.replaceChildren();
+    if (!conversations.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = "No conversations yet. Start a private chat or group.";
+      host.append(empty);
+      return;
+    }
+    conversations.forEach(conversation => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "chat-conversation" + (activeConversation?.id === conversation.id ? " active" : "");
+      const title = document.createElement("strong");
+      const typeLabel = conversation.conversation_type === "broadcast" ? "Broadcast" : conversation.conversation_type === "group" ? "Group chat" : "Private chat";
+      title.textContent = conversation.title || typeLabel;
+      const meta = document.createElement("small");
+      meta.textContent = typeLabel + " · " + new Date(conversation.updated_at || conversation.created_at).toLocaleString();
+      button.append(title, meta);
+      button.addEventListener("click", () => openConversation(conversation));
+      host.append(button);
+    });
+  }
+
+  async function loadMessages() {
+    if (!activeConversation) return;
+    const host = $("chat-messages");
+    const messages = await api("/api/chat/messages?conversation_id=" + encodeURIComponent(activeConversation.id));
+    host.replaceChildren();
+    if (!messages.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = "No messages yet. Say hello.";
+      host.append(empty);
+    }
+    messages.forEach(message => {
+      const bubble = document.createElement("article");
+      bubble.className = "chat-bubble" + (message.sender_id === currentUser.id ? " mine" : "");
+      const body = document.createElement("p");
+      body.textContent = message.deleted_at ? "This message was deleted." : message.body;
+      const meta = document.createElement("small");
+      meta.textContent = (message.sender_id === currentUser.id ? "You" : "Participant " + message.sender_id.slice(0, 8)) + " · " + new Date(message.created_at).toLocaleString();
+      bubble.append(body, meta);
+      host.append(bubble);
+    });
+    host.scrollTop = host.scrollHeight;
+    await api("/api/chat/read", { method: "POST", body: JSON.stringify({ conversation_id: activeConversation.id }) });
+  }
+
+  async function openConversation(conversation) {
+    activeConversation = conversation;
+    const typeLabel = conversation.conversation_type === "broadcast" ? "Super Admin broadcast" : conversation.conversation_type === "group" ? "Group conversation" : "Private conversation";
+    $("chat-thread-head").replaceChildren();
+    const title = document.createElement("strong");
+    title.textContent = conversation.title || typeLabel;
+    const sub = document.createElement("small");
+    sub.textContent = typeLabel + " · Messages are protected by participant-level access rules.";
+    $("chat-thread-head").append(title, sub);
+    $("chat-message-input").disabled = false;
+    $("chat-send").disabled = false;
+    await loadConversations();
+    await loadMessages();
+  }
+
+  async function createConversation() {
+    const type = $("chat-type").value;
+    const orgId = $("chat-organization").value;
+    const userIds = selectedValues($("chat-recipients"));
+    if (type !== "broadcast" && !orgId) throw new Error("Choose a business first.");
+    if (type === "direct" && userIds.length !== 1) throw new Error("Choose exactly one person for a private chat.");
+    if ((type === "group" || type === "broadcast") && userIds.length < 1) throw new Error("Choose at least one participant.");
+    const result = await api("/api/chat/conversations", {
+      method: "POST",
+      body: JSON.stringify({
+        conversation_type: type,
+        organization_id: type === "broadcast" ? null : orgId,
+        title: $("chat-title").value.trim(),
+        user_ids: userIds
+      })
+    });
+    $("chat-title").value = "";
+    setFeedback("chat-create-feedback", "Conversation created.", false);
+    await loadConversations();
+    await openConversation(result);
+  }
+
+  function initializeControls(isAdmin) {
+    if (initialized) return;
+    initialized = true;
+    $("chat-broadcast-option").disabled = !isAdmin;
+    $("chat-type").addEventListener("change", async () => {
+      const broadcast = $("chat-type").value === "broadcast";
+      $("chat-org-wrap").hidden = broadcast;
+      $("chat-organization").disabled = broadcast;
+      $("chat-recipients").multiple = $("chat-type").value !== "direct";
+      try { await loadMembers(); } catch (error) { setFeedback("chat-create-feedback", error.message); }
+    });
+    $("chat-organization").addEventListener("change", async () => {
+      try { await loadMembers(); } catch (error) { setFeedback("chat-create-feedback", error.message); }
+    });
+    $("chat-create").addEventListener("click", async () => {
+      const button = $("chat-create");
+      button.disabled = true;
+      setFeedback("chat-create-feedback", "Creating conversation…", false);
+      try { await createConversation(); }
+      catch (error) { setFeedback("chat-create-feedback", error.message); }
+      finally { button.disabled = false; }
+    });
+    $("chat-send-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const input = $("chat-message-input");
+      const button = $("chat-send");
+      const body = input.value.trim();
+      if (!activeConversation || !body) return;
+      button.disabled = true;
+      try {
+        await api("/api/chat/messages", { method: "POST", body: JSON.stringify({ conversation_id: activeConversation.id, body }) });
+        input.value = "";
+        await loadMessages();
+        await loadConversations();
+      } catch (error) { setFeedback("chat-feedback", error.message); }
+      finally { button.disabled = false; }
+    });
+    $("chat-refresh").addEventListener("click", async () => {
+      try { await loadConversations(); if (activeConversation) await loadMessages(); }
+      catch (error) { setFeedback("chat-feedback", error.message); }
+    });
+  }
+
+  async function start(user, userMemberships) {
+    currentUser = user;
+    memberships = Array.isArray(userMemberships) ? userMemberships : [];
+    const isAdmin = (user.email || "").toLowerCase() === "mwalimueckson2104@gmail.com";
+    $("chat-panel").classList.toggle("hidden", !isAdmin && !memberships.some(m => m.status === "active"));
+    if ($("chat-panel").classList.contains("hidden")) return;
+    initializeControls(isAdmin);
+    const orgSelect = $("chat-organization");
+    const previous = orgSelect.value;
+    orgSelect.replaceChildren();
+    memberships.filter(m => m.status === "active" && m.organization).forEach(m => {
+      const option = document.createElement("option");
+      option.value = m.organization_id;
+      option.textContent = m.organization.name;
+      orgSelect.append(option);
+    });
+    if (previous && Array.from(orgSelect.options).some(o => o.value === previous)) orgSelect.value = previous;
+    if (isAdmin) $("chat-broadcast-option").disabled = false;
+    try {
+      await loadMembers();
+      await loadConversations();
+      if (activeConversation && conversations.some(c => c.id === activeConversation.id)) {
+        activeConversation = conversations.find(c => c.id === activeConversation.id);
+        await loadMessages();
+      } else {
+        activeConversation = null;
+        $("chat-thread-head").innerHTML = "<strong>Select a conversation</strong>";
+        $("chat-messages").textContent = "Your messages will appear here.";
+        $("chat-message-input").disabled = true;
+        $("chat-send").disabled = true;
+      }
+    } catch (error) {
+      setFeedback("chat-feedback", error.message);
+    }
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(async () => {
+      if (!document.hidden && currentUser) {
+        try { await loadConversations(); if (activeConversation) await loadMessages(); } catch { /* transient network issue */ }
+      }
+    }, 12000);
+  }
+
+  window.EAMChat = { start };
+})();
