@@ -35,6 +35,18 @@ function saveSession(value) {
   else sessionStorage.removeItem("eamwifi_session");
 }
 
+const PLATFORM_PHONE = "0613794448";
+function setPlatformCallNotice(element, message) {
+  element.replaceChildren();
+  const text = document.createElement("span");
+  text.textContent = message + " Call: " + PLATFORM_PHONE + " ";
+  const link = document.createElement("a");
+  link.href = "tel:" + PLATFORM_PHONE;
+  link.textContent = "Call now";
+  link.className = "portal-link";
+  element.append(text, link);
+}
+
 async function loadWorkspace() {
   const user = await api("/api/auth/user");
   const memberships = await api("/api/organizations");
@@ -69,9 +81,9 @@ async function loadWorkspace() {
         const sub = await api(`/api/platform/subscription?organization_id=${encodeURIComponent(membership.organization_id)}`);
         if (!sub.active) {
           notice.classList.remove("hidden");
-          notice.textContent = sub.status === "expired"
-            ? "Your EAM-WIFI subscription has expired. Monthly renewal is TSh 6,000. Please call the platform administrator and confirm payment to reactivate your business."
-            : "Your business registration is waiting for payment approval. The EAM-WIFI platform subscription is TSh 6,000 per month. Please call the platform administrator; access starts after payment is confirmed.";
+          setPlatformCallNotice(notice, sub.status === "expired"
+            ? "Your EAM-WIFI subscription has expired. Monthly renewal is TSh 6,000. Call the platform administrator to confirm payment and reactivate your business."
+            : "Your business registration is waiting for payment approval. The EAM-WIFI platform subscription is TSh 6,000 per month. Call the platform administrator; access starts after payment is confirmed.");
         } else {
           notice.classList.remove("hidden");
           notice.textContent = `Your EAM-WIFI subscription is active until ${new Date(sub.expires_at).toLocaleString()}.`;
@@ -315,7 +327,7 @@ $("business-form").addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify(values)
     });
-    $("business-message").textContent = "Registration submitted. Call the EAM-WIFI platform administrator to discuss and confirm your TSh 6,000 monthly subscription. Your business remains locked until payment is approved. The router is registered but not connected yet.";
+    setPlatformCallNotice($("business-message"), "Registration submitted. Call the EAM-WIFI platform administrator to discuss and confirm your TSh 6,000 monthly subscription. Your business remains locked until payment is approved. The router is registered but not connected yet.");
     $("business-message").style.color = "#26734d";
     event.currentTarget.reset();
     await loadWorkspace();
