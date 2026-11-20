@@ -468,9 +468,155 @@ async function loadPackages(organizationId, role = "operator") {
   selectedOrganization = organizationId;
   const host = $("packages");
   host.textContent = "Loading packages…";
+  const canManage = ["owner", "admin"].includes(role);
   try {
-    const packages = await api(`/api/packages?organization_id=${encodeURIComponent(organizationId)}`);
+    const packages = await api(`/api/packages?organization_id=${encodeURIComponent(organizationId)}${canManage ? "&include_inactive=true" : ""}`);
     host.replaceChildren();
+
+    if (canManage) {
+      const manager = document.createElement("section");
+      manager.className = "package-manager stack";
+      const heading = document.createElement("div");
+      heading.innerHTML = "<h3>Manage your Wi-Fi packages · Simamia vifurushi vyako</h3><p class='muted small'>Create packages for this business only. Other businesses cannot see or edit them.</p>";
+      const form = document.createElement("form");
+      form.className = "package-form";
+      form.innerHTML = `
+        <label>Package name · Jina<input name="name" required minlength="2" maxlength="100" placeholder="e.g. 2 Hours"></label>
+        <label>Price (TZS) · Bei<input name="price_tzs" type="number" min="0" step="1" required></label>
+        <label>Usage duration (hours) · Muda wa matumizi (saa)<input name="duration_hours" type="number" min="0.0003" step="0.01" required value="2"></label>
+        <label>Validity (days, optional) · Mwisho wa kutumia (siku)<input name="validity_days" type="number" min="0.0003" step="0.01" placeholder="e.g. 7"></label>
+        <label>Data limit (GB, optional) · Kiasi cha data (GB)<input name="data_gb" type="number" min="0.000001" step="0.01" placeholder="Unlimited if blank"></label>
+        <label>Download speed (Mbps, optional) · Kasi ya kupakua<input name="down_mbps" type="number" min="0.000001" step="0.1"></label>
+        <label>Upload speed (Mbps, optional) · Kasi ya kupakia<input name="up_mbps" type="number" min="0.000001" step="0.1"></label>
+        <label>Maximum devices · Idadi ya vifaa<input name="max_devices" type="number" min="1" max="50" step="1" value="1" required></label>
+        <label>Time counting · Namna ya kuhesabu muda<select name="session_mode"><option value="connected_time">Connected time · Muda wa kuunganishwa</option><option value="wall_clock">Wall clock · Muda kuanzia activation</option></select></label>
+        <label class="full-span">Description · Maelezo<textarea name="description" maxlength="500" rows="2" placeholder="Optional package details"></textarea></label>
+        <div class="package-form-actions"><button class="primary" type="submit">Save package · Hifadhi kifurushi</button><button class="secondary" type="button" data-cancel hidden>Cancel edit · Ghairi</button><small class="muted" data-feedback></small></div>
+      `;
+      heading.append(form);
+      manager.append(heading);
+      host.append(manager);
+
+      const feedback = form.querySelector("[data-feedback]");
+      const cancel = form.querySelector("[data-cancel]");
+      let editingId = null;
+      const resetForm = () => {
+        editingId = null;
+        form.reset();
+        form.elements.duration_hours.value = "2";
+        form.elements.max_devices.value = "1";
+        form.querySelector("button[type=submit]").textContent = "Save package · Hifadhi kifurushi";
+        cancel.hidden = true;
+        feedback.textContent = "";
+      };
+      cancel.addEventListener("click", resetForm);
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const data = new FormData(form);
+        const hours = Number(data.get("duration_hours"));
+        const days = Number(data.get("validity_days"));
+        const gb = Number(data.get("data_gb"));
+        const down = Number(data.get("down_mbps"));
+        const up = Number(data.get("up_mbps"));
+        const payload = {
+          organization_id: organizationId,
+          name: String(data.get("name")).trim(),
+          price_tzs: Number(data.get("price_tzs")),
+          duration_seconds: Math.round(hours * 3600),
+          validity_seconds: days > 0 ? Math.round(days * 86400) : null,
+          data_limit_bytes: gb > 0 ? Math.round(gb * 1024 ** 3) : null,
+          speed_down_kbps: down > 0 ? Math.round(down * 1000) : null,
+          speed_up_kbps: up > 0 ? Math.round(up * 1000) : null,
+          max_devices: Number(data.get("max_devices")),
+          session_mode: data.get("session_mode"),
+          description: String(data.get("description") || "").trim() || null
+        };
+        if (!Number.isFinite(hours) || hours <= 0 || !Number.isSafeInteger(payload.price_tzs) || payload.price_tzs < 0) {
+          feedback.textContent = "Enter a valid price and duration.";
+          return;
+        }
+        const save = form.querySelector("button[type=submit]");
+        save.disabled = true;
+        feedback.textContent = "Saving…";
+        try {
+          await api(editingId ? `/api/packages?id=${encodeURIComponent(editingId)}` : "/api/packages", {
+            method: editingId ? "PATCH" : "POST",
+            body: JSON.stringify(payload)
+          });
+          resetForm();
+          feedback.textContent = "Package saved successfully.";
+          await loadPackages(organizationId, role);
+        } catch (error) {
+          feedback.textContent = error.message;
+        } finally { save.disabled = false; }
+      });
+
+      const listTitle = document.createElement("h3");
+      listTitle.textContent = "Your packages · Vifurushi vyako";
+      host.append(listTitle);
+      packages.forEach((item) => {
+        const card = document.createElement("div");
+        card.className = "item";
+        const info = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = item.name + (item.is_active ? " · Active" : " · Paused");
+        const detail = document.createElement("small");
+        detail.textContent = `TZS ${Number(item.price_tzs || 0).toLocaleString()} · ${(item.duration_seconds / 3600).toFixed(2)} hours${item.data_limit_bytes ? " · " + (item.data_limit_bytes / 1024 ** 3).toFixed(2) + " GB" : " · Unlimited data"}`;
+        info.append(title, detail);
+        const actions = document.createElement("div");
+        actions.className = "package-actions";
+        const edit = document.createElement("button");
+        edit.type = "button"; edit.className = "secondary"; edit.textContent = "Edit · Hariri";
+        edit.addEventListener("click", () => {
+          editingId = item.id;
+          form.elements.name.value = item.name || "";
+          form.elements.price_tzs.value = item.price_tzs ?? 0;
+          form.elements.duration_hours.value = (item.duration_seconds / 3600).toString();
+          form.elements.validity_days.value = item.validity_seconds ? (item.validity_seconds / 86400).toString() : "";
+          form.elements.data_gb.value = item.data_limit_bytes ? (item.data_limit_bytes / 1024 ** 3).toString() : "";
+          form.elements.down_mbps.value = item.speed_down_kbps ? (item.speed_down_kbps / 1000).toString() : "";
+          form.elements.up_mbps.value = item.speed_up_kbps ? (item.speed_up_kbps / 1000).toString() : "";
+          form.elements.max_devices.value = item.max_devices || 1;
+          form.elements.session_mode.value = item.session_mode || "connected_time";
+          form.elements.description.value = item.description || "";
+          form.querySelector("button[type=submit]").textContent = "Update package · Sasisha kifurushi";
+          cancel.hidden = false;
+          form.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+        const toggle = document.createElement("button");
+        toggle.type = "button"; toggle.className = "secondary";
+        toggle.textContent = item.is_active ? "Pause · Sitisha" : "Activate · Washa";
+        toggle.addEventListener("click", async () => {
+          toggle.disabled = true;
+          try {
+            await api(`/api/packages?id=${encodeURIComponent(item.id)}`, { method: "PATCH", body: JSON.stringify({ organization_id: organizationId, is_active: !item.is_active }) });
+            await loadPackages(organizationId, role);
+          } catch (error) { window.alert(error.message); toggle.disabled = false; }
+        });
+        const remove = document.createElement("button");
+        remove.type = "button"; remove.className = "secondary"; remove.textContent = "Delete · Futa";
+        remove.addEventListener("click", async () => {
+          if (!window.confirm("Delete this package only if it has never been used. Historical vouchers and sales are protected. Otherwise pause it instead.")) return;
+          remove.disabled = true;
+          try {
+            await api(`/api/packages?id=${encodeURIComponent(item.id)}`, { method: "DELETE", body: JSON.stringify({ organization_id: organizationId }) });
+            await loadPackages(organizationId, role);
+          } catch (error) { window.alert("Could not delete this package. It may have voucher or sales history. Pause it instead. " + error.message); remove.disabled = false; }
+        });
+        actions.append(edit, toggle, remove);
+        card.append(info, actions);
+        if (item.is_active) appendVoucherIssueControls(card, item, organizationId);
+        host.append(card);
+      });
+      if (!packages.length) {
+        const empty = document.createElement("p");
+        empty.className = "muted";
+        empty.textContent = "No packages yet. Create your first package above.";
+        host.append(empty);
+      }
+      return;
+    }
+
     if (!packages.length) {
       host.textContent = "No active packages are available, or your account has no permission to view them.";
       return;
@@ -482,113 +628,9 @@ async function loadPackages(organizationId, role = "operator") {
       const title = document.createElement("strong");
       title.textContent = item.name;
       const detail = document.createElement("small");
-      const hours = item.duration_seconds ? `${(item.duration_seconds / 3600).toFixed(1)} hours` : "Duration not set";
-      detail.textContent = `TZS ${Number(item.price_tzs || 0).toLocaleString()} · ${hours}`;
+      detail.textContent = `TZS ${Number(item.price_tzs || 0).toLocaleString()} · ${(item.duration_seconds / 3600).toFixed(1)} hours`;
       info.append(title, detail);
       card.append(info);
-
-      if (["owner", "admin"].includes(role)) {
-        const voucherPanel = document.createElement("div");
-        voucherPanel.className = "stack voucher-issue";
-        const phone = document.createElement("input");
-        phone.type = "tel";
-        phone.placeholder = "Customer phone (optional)";
-        phone.setAttribute("aria-label", "Customer phone number");
-        const amount = document.createElement("input");
-        amount.type = "number";
-        amount.min = "1";
-        amount.step = "1";
-        amount.value = String(Number(item.price_tzs || 0));
-        amount.setAttribute("aria-label", "Amount received in TZS");
-        const method = document.createElement("select");
-        method.setAttribute("aria-label", "Payment method");
-        [
-          ["cash", "Cash"],
-          ["mobile_money", "Mobile money"],
-          ["bank_transfer", "Bank transfer"],
-          ["other", "Other"]
-        ].forEach(([value, label]) => {
-          const option = document.createElement("option");
-          option.value = value;
-          option.textContent = label;
-          method.append(option);
-        });
-        const reference = document.createElement("input");
-        reference.type = "text";
-        reference.maxLength = 120;
-        reference.placeholder = "Payment reference (optional)";
-        reference.setAttribute("aria-label", "Payment reference");
-        const issue = document.createElement("button");
-        issue.type = "button";
-        issue.className = "secondary";
-        issue.textContent = "Confirm payment and issue ONE voucher";
-        const message = document.createElement("small");
-        message.className = "muted";
-        const code = document.createElement("input");
-        code.readOnly = true;
-        code.hidden = true;
-        code.setAttribute("aria-label", "New voucher code");
-        code.className = "voucher-code";
-        const copy = document.createElement("button");
-        copy.type = "button";
-        copy.className = "secondary";
-        copy.textContent = "Copy voucher code";
-        copy.hidden = true;
-        copy.addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(code.value);
-            message.textContent = "Voucher copied. Give this code to the customer.";
-          } catch {
-            code.focus();
-            code.select();
-            message.textContent = "Select and copy the voucher code manually.";
-          }
-        });
-        issue.addEventListener("click", async () => {
-          const paid = Number(amount.value);
-          if (!Number.isSafeInteger(paid) || paid < 1) {
-            message.textContent = "Enter the amount actually received.";
-            return;
-          }
-          if (paid !== Number(item.price_tzs)) {
-            message.textContent = "The amount must exactly match this package price.";
-            return;
-          }
-          if (!window.confirm("Confirm that you have received the full payment for this package. A new one-time voucher will be issued.")) return;
-          issue.disabled = true;
-          code.hidden = true;
-          copy.hidden = true;
-          message.textContent = "Recording payment and issuing one unique voucher…";
-          try {
-            const result = await api("/api/vouchers/issue-paid", {
-              method: "POST",
-              body: JSON.stringify({
-                organization_id: organizationId,
-                package_id: item.id,
-                amount_paid: paid,
-                payment_method: method.value,
-                customer_phone: phone.value.trim() || null,
-                payment_reference: reference.value.trim() || null
-              })
-            });
-            if (!result.code || !/^EW[A-F0-9]{24}$/.test(result.code)) {
-              throw new Error("The server did not return a valid voucher code. Contact support before retrying.");
-            }
-            code.value = result.code;
-            code.hidden = false;
-            copy.hidden = false;
-            message.textContent = "Payment recorded. Give this code to the customer now. The full code will not be shown again.";
-            phone.value = "";
-            reference.value = "";
-          } catch (error) {
-            message.textContent = error.message;
-          } finally {
-            issue.disabled = false;
-          }
-        });
-        voucherPanel.append(phone, amount, method, reference, issue, message, code, copy);
-        card.append(voucherPanel);
-      }
       host.append(card);
     });
   } catch (error) {
@@ -596,6 +638,41 @@ async function loadPackages(organizationId, role = "operator") {
   }
 }
 
+function appendVoucherIssueControls(card, item, organizationId) {
+  const voucherPanel = document.createElement("div");
+  voucherPanel.className = "stack voucher-issue";
+  const phone = document.createElement("input");
+  phone.type = "tel"; phone.placeholder = "Customer phone (optional)";
+  const amount = document.createElement("input");
+  amount.type = "number"; amount.min = "1"; amount.step = "1"; amount.value = String(Number(item.price_tzs || 0));
+  amount.setAttribute("aria-label", "Amount received in TZS");
+  const method = document.createElement("select");
+  [["cash","Cash"],["mobile_money","Mobile money"],["bank_transfer","Bank transfer"],["other","Other"]].forEach(([value,label]) => {
+    const option = document.createElement("option"); option.value = value; option.textContent = label; method.append(option);
+  });
+  const reference = document.createElement("input"); reference.maxLength = 120; reference.placeholder = "Payment reference (optional)";
+  const issue = document.createElement("button"); issue.type = "button"; issue.className = "secondary"; issue.textContent = "Confirm payment and issue ONE voucher";
+  const message = document.createElement("small"); message.className = "muted";
+  const code = document.createElement("input"); code.readOnly = true; code.hidden = true; code.className = "voucher-code";
+  const copy = document.createElement("button"); copy.type = "button"; copy.className = "secondary"; copy.textContent = "Copy voucher code"; copy.hidden = true;
+  copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(code.value); message.textContent = "Voucher copied."; } catch { code.focus(); code.select(); message.textContent = "Select and copy the voucher manually."; } });
+  issue.addEventListener("click", async () => {
+    const paid = Number(amount.value);
+    if (!Number.isSafeInteger(paid) || paid !== Number(item.price_tzs)) { message.textContent = "Enter the exact package price received."; return; }
+    if (!window.confirm("Confirm full payment received? One voucher will be issued.")) return;
+    issue.disabled = true; message.textContent = "Issuing voucher…";
+    try {
+      const result = await api("/api/vouchers/issue-paid", { method: "POST", body: JSON.stringify({ organization_id: organizationId, package_id: item.id, amount_paid: paid, payment_method: method.value, customer_phone: phone.value.trim() || null, payment_reference: reference.value.trim() || null }) });
+      if (!result.code || !/^EW[A-F0-9]{24}$/.test(result.code)) throw new Error("No valid voucher code was returned. Contact support before retrying.");
+      code.value = result.code; code.hidden = false; copy.hidden = false;
+      message.textContent = "Payment recorded. Give this voucher to the customer.";
+      phone.value = ""; reference.value = "";
+    } catch (error) { message.textContent = error.message; }
+    finally { issue.disabled = false; }
+  });
+  voucherPanel.append(phone, amount, method, reference, issue, message, code, copy);
+  card.append(voucherPanel);
+}
 
 $("admin-open-business").addEventListener("click", () => {
   $("platform-admin").classList.add("hidden");
