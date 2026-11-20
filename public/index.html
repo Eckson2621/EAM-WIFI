@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b33">
+  <title>EAM-WIFI | Hotspot Management</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">EAM-WIFI</a>
+    <span class="tagline">Wi-Fi Hotspot Management</span>
+    <span id="connection" class="status">Checking service…</span>
+  </header>
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">EAM VENTURES</p>
+      <h1>Manage your Wi-Fi business from one place.</h1>
+      <p class="muted">Manage hotspot organizations, packages and customer access securely.</p>
+    </section>
+    <section id="auth-panel" class="panel">
+      <div class="tabs">
+        <button id="login-tab" class="tab active" type="button">Sign in</button>
+        <button id="signup-tab" class="tab" type="button">Create account</button>
+      </div>
+      <form id="auth-form">
+        <label>Email address<input id="email" type="email" autocomplete="email" required></label>
+        <label>Password<input id="password" type="password" minlength="8" autocomplete="current-password" required></label>
+        <button id="submit-auth" class="primary" type="submit">Sign in</button>
+      </form>
+      <p id="auth-message" class="message" role="status"></p>
+    </section>
+    <section id="dashboard" class="panel hidden">
+      <div class="dashboard-head">
+        <div><p class="eyebrow">ACCOUNT</p><h2 id="welcome">Your workspace</h2></div>
+        <button id="signout" class="secondary" type="button">Sign out</button>
+      </div>
+      <h3>Your organizations</h3>
+      <div id="organizations" class="stack"><p class="muted">Loading organizations…</p></div>
+      <h3>Active Wi-Fi packages</h3>
+      <div id="packages" class="stack"><p class="muted">Select an organization to view its packages.</p></div>
+      <p class="muted small">Only records allowed by your Supabase account policies will be shown.</p>
+    </section>
+  </main>
+  <footer>© <span id="year"></span> EAM VENTURES · EAM-WIFI</footer>
+</body>
+</html>
