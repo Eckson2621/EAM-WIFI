@@ -82,6 +82,16 @@ async function loadWorkspace() {
       }
     }
     info.append(name, meta);
+    if (membership.role === "owner" || membership.role === "admin") {
+      const portalLink = document.createElement("a");
+      portalLink.href = `/portal?site=${encodeURIComponent(membership.organization?.slug || "")}`;
+      portalLink.target = "_blank";
+      portalLink.rel = "noopener";
+      portalLink.textContent = "Open customer Wi-Fi portal";
+      portalLink.className = "portal-link";
+      if (!membership.organization?.slug) portalLink.hidden = true;
+      info.append(portalLink);
+    }
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = "View packages";
@@ -110,7 +120,8 @@ async function loadPlatformAccounts() {
       const info = document.createElement("div");
       const name = document.createElement("strong");
       name.textContent = account.name;
-      const sub = account.platform_subscriptions;
+      const rawSub = account.platform_subscriptions;
+      const sub = Array.isArray(rawSub) ? rawSub[0] : rawSub;
       const state = sub?.status || account.status || "pending";
       const expiry = sub?.expires_at ? ` · Expires ${new Date(sub.expires_at).toLocaleDateString()}` : "";
       const meta = document.createElement("small");
