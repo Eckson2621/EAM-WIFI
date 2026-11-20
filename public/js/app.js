@@ -55,7 +55,7 @@ async function loadWorkspace() {
   const host = $("organizations");
   host.replaceChildren();
   $("packages").innerHTML = '<p class="muted">Choose an organization to view packages.</p>';
-  memberships.forEach((membership) => {
+  memberships.forEach(async (membership) => {
     const card = document.createElement("div");
     card.className = "item";
     const info = document.createElement("div");
