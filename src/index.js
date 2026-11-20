@@ -433,7 +433,7 @@ async function handleApi(request, env) {
       return json({ error: "A valid organization_id is required." }, 400);
     }
     let input = {};
-    if (["POST", "PATCH"].includes(request.method)) {
+    if (["POST", "PATCH", "DELETE"].includes(request.method)) {
       try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
     }
     const orgId = request.method === "GET" ? organizationId : String(input.organization_id || "");
@@ -486,6 +486,7 @@ async function handleApi(request, env) {
       organization_id: `eq.${orgId}`,
       order: "display_order.asc,created_at.asc"
     });
+    if (url.searchParams.get("include_inactive") !== "true") query.set("is_active", "eq.true");
     const upstream = await supabaseFetch(env, `/rest/v1/wifi_packages?${query}`, { method: "GET" }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
@@ -503,7 +504,7 @@ export default {
         return env.ASSETS ? env.ASSETS.fetch(new Request(portalUrl, request)) : new Response("Portal assets unavailable.", { status: 503 });
       }
       if (url.pathname.startsWith("/api/")) {
-        if (!["GET", "POST", "PATCH"].includes(request.method)) return json({ error: "Method not allowed." }, 405);
+        if (!["GET", "POST", "PATCH", "DELETE"].includes(request.method)) return json({ error: "Method not allowed." }, 405);
         return await handleApi(request, env);
       }
       if (env.ASSETS) return env.ASSETS.fetch(request);
