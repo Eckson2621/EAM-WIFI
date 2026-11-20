@@ -108,3 +108,5 @@
 .support-status.status-closed{background:#e7f5ed;color:#26734d}
 .support-actions{display:flex;gap:7px;flex-wrap:wrap}
 .support-actions button{font-size:.78rem;padding:8px 10px}
+
+.support-inbox-tools{display:flex;gap:8px;flex-wrap:wrap}
