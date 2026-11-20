@@ -18,14 +18,13 @@ async function supabaseFetch(env, path, options = {}, token = "") {
   headers.set("accept", "application/json");
   if (token) headers.set("authorization", `Bearer ${token}`);
   if (options.body && !headers.has("content-type")) headers.set("content-type", "application/json");
-  return fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}${path}`, { ...options, headers });
+  return fetch(`${env.SUPABASE_URL.replace(/\\/$/, "")}${path}`, { ...options, headers });
 }
 
 async function proxyAuth(request, env, path) {
   const body = request.method === "POST" ? await request.text() : undefined;
   const upstream = await supabaseFetch(env, path, { method: request.method, body });
-  const payload = await upstream.text();
-  return new Response(payload, {
+  return new Response(await upstream.text(), {
     status: upstream.status,
     headers: { ...JSON_HEADERS, "cache-control": "no-store" }
   });
@@ -38,7 +37,6 @@ async function handleApi(request, env) {
   if (request.method === "GET" && path === "/api/health") {
     return json({ ok: true, app: "EAM-WIFI", supabase_project: "configured", timestamp: new Date().toISOString() });
   }
-
 
   if (path === "/api/register-business" && request.method === "POST") {
     const token = getToken(request);
@@ -70,12 +68,8 @@ async function handleApi(request, env) {
     });
   }
 
-  if (path === "/api/auth/signup" && request.method === "POST") {
-    return proxyAuth(request, env, "/auth/v1/signup");
-  }
-  if (path === "/api/auth/signin" && request.method === "POST") {
-    return proxyAuth(request, env, "/auth/v1/token?grant_type=password");
-  }
+  if (path === "/api/auth/signup" && request.method === "POST") return proxyAuth(request, env, "/auth/v1/signup");
+  if (path === "/api/auth/signin" && request.method === "POST") return proxyAuth(request, env, "/auth/v1/token?grant_type=password");
   if (path === "/api/auth/logout" && request.method === "POST") {
     const token = getToken(request);
     if (!token) return json({ error: "Authentication required." }, 401);
@@ -91,6 +85,32 @@ async function handleApi(request, env) {
 
   const token = getToken(request);
   if (!token) return json({ error: "Authentication required." }, 401);
+
+  if (path === "/api/vouchers/generate" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const organizationId = String(input.organization_id || "");
+    const packageId = String(input.package_id || "");
+    const quantity = Number(input.quantity);
+    if (!/^[0-9a-f-]{36}$/i.test(organizationId) || !/^[0-9a-f-]{36}$/i.test(packageId)) {
+      return json({ error: "Valid organization_id and package_id are required." }, 400);
+    }
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 500) {
+      return json({ error: "Quantity must be an integer from 1 to 500." }, 400);
+    }
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/generate_wifi_vouchers", {
+      method: "POST",
+      body: JSON.stringify({
+        p_organization_id: organizationId,
+        p_package_id: packageId,
+        p_quantity: quantity
+      })
+    }, token);
+    return new Response(await upstream.text(), {
+      status: upstream.status,
+      headers: { ...JSON_HEADERS, "cache-control": "no-store" }
+    });
+  }
 
   if (path === "/api/organizations" && request.method === "GET") {
     const upstream = await supabaseFetch(
