@@ -375,6 +375,7 @@ async function signOut() {
   saveSession(null);
   $("business-onboarding").classList.add("hidden");
   $("dashboard").classList.add("hidden");
+  $("platform-admin").classList.add("hidden");
   $("auth-panel").classList.remove("hidden");
   $("password").value = "";
   showMessage("You have signed out.", false);
