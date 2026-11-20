@@ -37,29 +37,34 @@ function saveSession(value) {
 
 async function loadWorkspace() {
   $("auth-panel").classList.add("hidden");
-  $("dashboard").classList.remove("hidden");
   const user = await api("/api/auth/user");
-  $("welcome").textContent = user.email || "Your workspace";
   const memberships = await api("/api/organizations");
+  if (!memberships.length) {
+    $("dashboard").classList.add("hidden");
+    $("business-onboarding").classList.remove("hidden");
+    return;
+  }
+  $("business-onboarding").classList.add("hidden");
+  $("dashboard").classList.remove("hidden");
+  $("welcome").textContent = user.email || "Your workspace";
   const host = $("organizations");
   host.replaceChildren();
   $("packages").innerHTML = '<p class="muted">Choose an organization to view packages.</p>';
-  if (!memberships.length) {
-    host.innerHTML = '<p class="muted">No organization membership is linked to this account yet. An organization owner or platform administrator must set up access.</p>';
-    return;
-  }
   memberships.forEach((membership) => {
     const card = document.createElement("div");
     card.className = "item";
     const info = document.createElement("div");
     const name = document.createElement("strong");
-    name.textContent = `Organization ${membership.organization_id}`;
+    name.textContent = membership.organization?.name || `Organization ${membership.organization_id}`;
     const meta = document.createElement("small");
-    meta.textContent = `Role: ${membership.role} · Status: ${membership.status}`;
+    const orgStatus = membership.organization?.status || "unknown";
+    meta.textContent = `Role: ${membership.role} · Membership: ${membership.status} · Business: ${orgStatus}`;
     info.append(name, meta);
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = "View packages";
+    button.disabled = orgStatus !== "active";
+    if (orgStatus !== "active") button.title = "Your business is awaiting platform approval.";
     button.addEventListener("click", () => loadPackages(membership.organization_id));
     card.append(info, button);
     host.append(card);
@@ -94,6 +99,33 @@ async function loadPackages(organizationId) {
     host.textContent = error.message;
   }
 }
+
+
+$("business-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("business-submit");
+  button.disabled = true;
+  $("business-message").textContent = "Registering your business, hotspot site and router record…";
+  $("business-message").style.color = "#26734d";
+  try {
+    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    values.country_code = values.country_code.trim().toUpperCase();
+    values.currency_code = values.currency_code.trim().toUpperCase();
+    const result = await api("/api/register-business", {
+      method: "POST",
+      body: JSON.stringify(values)
+    });
+    $("business-message").textContent = "Registration submitted. Your business is pending approval; the router is recorded but not connected yet. Next step: secure router pairing.";
+    $("business-message").style.color = "#26734d";
+    event.currentTarget.reset();
+    await loadWorkspace();
+  } catch (error) {
+    $("business-message").textContent = error.message;
+    $("business-message").style.color = "#a33b32";
+  } finally {
+    button.disabled = false;
+  }
+});
 
 $("login-tab").addEventListener("click", () => setMode("signin"));
 $("signup-tab").addEventListener("click", () => setMode("signup"));
