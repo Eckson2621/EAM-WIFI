@@ -30,6 +30,10 @@ async function loadPortal() {
   } else {
     contact.textContent = "Contact the Wi-Fi business to purchase a voucher.";
   }
+  if (!data.router_ready) {
+    $("redeem-button").disabled = true;
+    showMessage("This hotspot's MikroTik router is not connected to EAM-WIFI yet. You can view packages and call the business, but voucher activation is not available yet.");
+  }
   const host = $("packages");
   host.replaceChildren();
   if (!data.packages?.length) {
