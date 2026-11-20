@@ -200,6 +200,14 @@ async function handleApi(request, env) {
     if (!organizationId || !/^[0-9a-f-]{36}$/i.test(organizationId)) {
       return json({ error: "A valid organization_id is required." }, 400);
     }
+    const subscriptionCheck = await supabaseFetch(env, "/rest/v1/rpc/platform_subscription_status", {
+      method: "POST", body: JSON.stringify({ p_organization_id: organizationId })
+    }, token);
+    if (!subscriptionCheck.ok) {
+      return new Response(await subscriptionCheck.text(), { status: subscriptionCheck.status, headers: JSON_HEADERS });
+    }
+    const subscription = await subscriptionCheck.json();
+    if (!subscription?.active) return json({ error: "EAM-WIFI subscription is pending or expired. Contact the platform administrator." }, 403);
     const query = new URLSearchParams({
       select: "id,organization_id,name,description,price_tzs,duration_seconds,validity_seconds,data_limit_bytes,speed_down_kbps,speed_up_kbps,max_devices,session_mode,is_active,display_order",
       organization_id: `eq.${organizationId}`,
