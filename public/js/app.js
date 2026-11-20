@@ -69,6 +69,7 @@ async function loadWorkspace() {
   if (profile.business_name) prefill("site_name", profile.business_name + " Hotspot");
   $("auth-panel").classList.add("hidden");
   const isPlatformAdmin = (user.email || "").toLowerCase() === "mwalimueckson2104@gmail.com";
+  $("onboarding-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
   if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformAccounts()]); }
   if (!memberships.length) {
@@ -388,7 +389,7 @@ async function loadPackages(organizationId, role = "operator") {
 }
 
 
-$("admin-register-business").addEventListener("click", () => {
+$("onboarding-back-admin").addEventListener("click", async () => {\n  $("business-onboarding").classList.add("hidden");\n  $("dashboard").classList.add("hidden");\n  $("platform-admin").classList.remove("hidden");\n  $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });\n  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);\n});\n\n$("admin-register-business").addEventListener("click", () => {
   $("platform-admin").classList.add("hidden");
   $("dashboard").classList.add("hidden");
   $("business-onboarding").classList.remove("hidden");
