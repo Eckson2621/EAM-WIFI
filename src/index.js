@@ -83,6 +83,34 @@ async function handleApi(request, env) {
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
 
+  if (path === "/api/public/portal" && request.method === "GET") {
+    const slug = url.searchParams.get("site") || "";
+    if (!/^[a-z0-9-]{3,80}$/.test(slug)) return json({ error: "A valid Wi-Fi site is required." }, 400);
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/public_wifi_portal", {
+      method: "POST", body: JSON.stringify({ p_slug: slug })
+    });
+    const body = await upstream.text();
+    if (!upstream.ok) return new Response(body, { status: upstream.status, headers: JSON_HEADERS });
+    const data = JSON.parse(body || "null");
+    if (!data) return json({ error: "This Wi-Fi service is unavailable." }, 404);
+    return json(data);
+  }
+
+  if (path === "/api/public/redeem" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const slug = String(input.site || "");
+    const code = String(input.code || "").trim().toUpperCase();
+    const mac = String(input.mac_address || "");
+    if (!/^[a-z0-9-]{3,80}$/.test(slug)) return json({ error: "A valid Wi-Fi site is required." }, 400);
+    if (!/^EW[A-F0-9]{16,24}$/.test(code)) return json({ error: "Enter a valid voucher code." }, 400);
+    if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(mac)) return json({ error: "Connect through the Wi-Fi login page so the router can identify your device." }, 400);
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/redeem_wifi_voucher", {
+      method: "POST", body: JSON.stringify({ p_slug: slug, p_code: code, p_mac_address: mac })
+    });
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
   const token = getToken(request);
   if (!token) return json({ error: "Authentication required." }, 401);
 
@@ -225,6 +253,11 @@ export default {
   async fetch(request, env) {
     try {
       const url = new URL(request.url);
+      if (url.pathname === "/portal") {
+        const portalUrl = new URL("/portal.html", url);
+        portalUrl.search = url.search;
+        return env.ASSETS ? env.ASSETS.fetch(new Request(portalUrl, request)) : new Response("Portal assets unavailable.", { status: 503 });
+      }
       if (url.pathname.startsWith("/api/")) {
         if (!["GET", "POST"].includes(request.method)) return json({ error: "Method not allowed." }, 405);
         return await handleApi(request, env);
