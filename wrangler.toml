@@ -1,0 +1,11 @@
+name = "eam-wifi"
+main = "src/index.js"
+compatibility_date = "2026-11-20"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[vars]
+SUPABASE_URL = "https://jrgmzajlmuqpslhhroez.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_suaOvY96CeWAyi8c0vACFg_yU5MKewH"
