@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b33">
   <title>EAM-WIFI | Hotspot Management</title>
   <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/app.js?v=20261120-3" defer></script>
+  <script src="/js/app.js?v=20261120-4" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -98,6 +98,19 @@
         <div class="stat-card"><span>Subscription revenue this month</span><strong id="stat-month-revenue">TZS —</strong></div>
         <div class="stat-card"><span>All-time subscription revenue</span><strong id="stat-total-revenue">TZS —</strong></div>
       </div>
+      <section class="admin-visuals" aria-label="Platform analytics">
+        <article class="chart-panel">
+          <div class="chart-heading"><div><p class="eyebrow">LIVE OVERVIEW</p><h3>Business health</h3></div><span class="live-indicator">LIVE DATA</span></div>
+          <div class="metric-bar"><div><span>Active businesses</span><strong id="chart-active-label">0</strong></div><div class="bar-track"><span id="chart-active-bar" class="bar-fill"></span></div></div>
+          <div class="metric-bar"><div><span>Pending businesses</span><strong id="chart-pending-label">0</strong></div><div class="bar-track"><span id="chart-pending-bar" class="bar-fill"></span></div></div>
+        </article>
+        <article class="chart-panel">
+          <div class="chart-heading"><div><p class="eyebrow">NETWORK SNAPSHOT</p><h3>Network activity</h3></div><span class="live-indicator">LIVE DATA</span></div>
+          <div class="metric-bar"><div><span>Routers online</span><strong id="chart-routers-label">0 / 0</strong></div><div class="bar-track"><span id="chart-routers-bar" class="bar-fill"></span></div></div>
+          <div class="metric-bar"><div><span>Connected sessions</span><strong id="chart-sessions-label">0</strong></div><div class="bar-track"><span id="chart-sessions-bar" class="bar-fill"></span></div></div>
+          <div class="metric-bar"><div><span>Wi-Fi customers</span><strong id="chart-customers-label">0</strong></div><div class="bar-track"><span id="chart-customers-bar" class="bar-fill"></span></div></div>
+        </article>
+      </section>
       <div class="admin-section-head"><h3>Business subscriptions</h3><p class="muted">Confirm the owner's monthly payment of TSh 6,000 after speaking with them. Approval activates the business for one month.</p></div>
       <div id="platform-accounts" class="stack"><p class="muted">Loading business accounts…</p></div>
       <p id="platform-admin-message" class="message" role="status"></p>
