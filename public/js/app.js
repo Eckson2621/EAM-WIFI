@@ -53,7 +53,7 @@ async function loadWorkspace() {
   $("auth-panel").classList.add("hidden");
   const isPlatformAdmin = (user.email || "").toLowerCase() === "mwalimueckson2104@gmail.com";
   $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
-  if (isPlatformAdmin) await loadPlatformAccounts();
+  if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformAccounts()]); }
   if (!memberships.length) {
     $("dashboard").classList.add("hidden");
     $("business-onboarding").classList.toggle("hidden", isPlatformAdmin);
@@ -113,6 +113,27 @@ async function loadWorkspace() {
     card.append(info, button);
     host.append(card);
   });
+}
+
+async function loadPlatformStats() {
+  const ids = ["stat-businesses","stat-active","stat-pending","stat-sites","stat-routers","stat-customers","stat-vouchers","stat-sessions","stat-month-revenue","stat-total-revenue"];
+  try {
+    const stats = await api("/api/platform/admin/dashboard");
+    const number = (value) => Number(value || 0).toLocaleString();
+    $("stat-businesses").textContent = number(stats.businesses_total);
+    $("stat-active").textContent = number(stats.businesses_active);
+    $("stat-pending").textContent = number(stats.businesses_pending);
+    $("stat-sites").textContent = number(stats.hotspot_sites);
+    $("stat-routers").textContent = number(stats.routers_online) + " / " + number(stats.routers_total);
+    $("stat-customers").textContent = number(stats.customers_total);
+    $("stat-vouchers").textContent = number(stats.vouchers_total);
+    $("stat-sessions").textContent = number(stats.sessions_active);
+    $("stat-month-revenue").textContent = "TZS " + number(stats.payments_month_tzs);
+    $("stat-total-revenue").textContent = "TZS " + number(stats.payments_total_tzs);
+  } catch (error) {
+    ids.forEach((id) => { if ($(id)) $(id).textContent = "Unavailable"; });
+    $("platform-admin-message").textContent = "Dashboard data could not load: " + error.message;
+  }
 }
 
 async function loadPlatformAccounts() {
@@ -392,7 +413,7 @@ $("platform-signout").addEventListener("click", signOut);
   $("dashboard").classList.add("hidden");
   $("platform-admin").classList.add("hidden");
   $("auth-message").textContent = "";
-  saveSession(null);
+  const savedSession = sessionStorage.getItem("eamwifi_session");
   try {
     const health = await api("/api/health");
     $("connection").textContent = health.ok ? "Service online" : "Service unavailable";
@@ -400,12 +421,15 @@ $("platform-signout").addEventListener("click", signOut);
     $("connection").textContent = "Service unavailable";
   }
   try {
-    const saved = sessionStorage.getItem("eamwifi_session");
-    if (saved) {
-      saveSession(JSON.parse(saved));
+    if (savedSession) {
+      saveSession(JSON.parse(savedSession));
       await loadWorkspace();
     }
   } catch {
     saveSession(null);
+    $("platform-admin").classList.add("hidden");
+    $("dashboard").classList.add("hidden");
+    $("business-onboarding").classList.add("hidden");
+    $("auth-panel").classList.remove("hidden");
   }
 })();
