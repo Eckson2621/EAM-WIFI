@@ -178,7 +178,9 @@ async function handleApi(request, env) {
     return new Response(body, { status: insert.status, headers: JSON_HEADERS });
   }
   if (path === "/api/support/messages" && request.method === "GET") {
-    const query = new URLSearchParams({ select: "id,user_id,sender_email,sender_name,organization_id,category,subject,message,status,created_at,updated_at,organization:organizations(name)", order: "created_at.desc", limit: "200" });
+    const requestedOffset = Number(url.searchParams.get("offset") || 0);
+    const offset = Number.isInteger(requestedOffset) && requestedOffset >= 0 ? requestedOffset : 0;
+    const query = new URLSearchParams({ select: "id,user_id,sender_email,sender_name,organization_id,category,subject,message,status,created_at,updated_at,organization:organizations(name)", order: "created_at.desc", limit: "200", offset: String(offset) });
     const upstream = await supabaseFetch(env, `/rest/v1/support_messages?${query}`, { method: "GET" }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
