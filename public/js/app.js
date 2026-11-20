@@ -65,7 +65,7 @@ async function sendSupportMessage(event) {
   button.disabled = true;
   $("support-feedback").textContent = "Sending your message securely…";
   try {
-    const memberships = await api("/api/organizations");
+    const memberships = await api("/api/organizations");\n  if (window.EAMChat) await window.EAMChat.start(user, memberships);
     const active = memberships.find((m) => m.status === "active" && m.role === "owner");
     await api("/api/support/messages", { method: "POST", body: JSON.stringify({
       category: $("support-category").value,
