@@ -110,3 +110,15 @@
 .support-actions button{font-size:.78rem;padding:8px 10px}
 
 .support-inbox-tools{display:flex;gap:8px;flex-wrap:wrap}
+
+.support-own-history{margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f2}
+.support-thread{margin:14px 0;padding:12px;border-radius:10px;background:#f7f9fd;border:1px solid #e1e8f3}
+.support-replies{margin:10px 0}
+.support-reply{padding:10px 12px;border-radius:10px;border:1px solid #dfe6f1;background:#fff}
+.support-reply.reply-admin{border-left:4px solid #244db2;background:#f5f8ff}
+.support-reply.reply-user{border-left:4px solid #22a58a}
+.support-reply strong,.support-reply small{display:block}
+.support-reply small{margin-top:3px;color:#7a879c;font-size:.72rem}
+.support-reply-form{display:grid;gap:8px;max-width:none;margin-top:10px}
+.support-reply-form textarea{width:100%;resize:vertical;min-height:58px;padding:10px;border:1px solid #cfd8e6;border-radius:9px;font:inherit}
+.support-reply-form button{justify-self:start}
