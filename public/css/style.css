@@ -92,3 +92,4 @@
 .compact-steps{grid-template-columns:repeat(2,minmax(0,1fr))}
 .simulation-actions{display:flex;gap:9px;flex-wrap:wrap}
 @media(max-width:600px){.compact-steps{grid-template-columns:1fr}.help-trigger{padding:7px 8px;font-size:.72rem}.guide-actions button{width:100%}.router-lab{padding:14px}}
+\n.router-checklist{padding-left:24px;color:#53627c;font-size:.88rem;line-height:1.65}.router-checklist li{padding:3px 0}\n
