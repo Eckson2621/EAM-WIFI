@@ -38,3 +38,21 @@ test("paid voucher issuance endpoint rejects unauthenticated requests", async ()
   }), {});
   assert.equal(response.status, 401);
 });
+
+test("public customer portal validates site slug before database access", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/public/portal?site=BAD!"), {});
+  assert.equal(response.status, 400);
+});
+
+test("public voucher redemption rejects malformed requests before database access", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/public/redeem", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ site: "bad!", code: "bad", mac_address: "not-a-mac" })
+  }), {});
+  assert.equal(response.status, 400);
+});
+
+test("platform subscription admin endpoints require authentication", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/platform/admin/accounts"), {});
+  assert.equal(response.status, 401);
+});
