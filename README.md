@@ -9,7 +9,7 @@ EAM-WIFI is a multi-tenant Wi-Fi hotspot management application by EAM VENTURES.
 - Hotspot site registration, including branch name and physical address.
 - Router metadata registration: brand, model, integration mode, optional LAN address and API port.
 - A transaction-safe Supabase RPC creates the organization, owner membership, user profile, hotspot site, router record and organization settings together.
-- Organization membership and Wi-Fi package lookup, scoped by the authenticated user's RLS permissions.
+- Organization membership and Wi-Fi package lookup, scoped by the authenticated user's RLS permissions.\n- Manual paid voucher issuance: an owner/admin confirms the full package amount, records payment method and optional customer phone/reference, then issues exactly one fresh globally unique voucher code. A sales ledger records who confirmed the payment.
 - The Worker forwards the signed-in user's JWT and does not use a service-role key.
 
 ## Existing Supabase project
@@ -43,7 +43,7 @@ Never paste Cloudflare tokens, Supabase service-role keys, router passwords or p
 
 ## Router connection status
 
-Registration creates the router record but does **not** connect to the physical router. Router secure pairing, live RouterOS control, heartbeat/status updates, captive portal, voucher redemption, payment collection and router event processing are still to be built and tested.
+Registration creates the router record but does **not** connect to the physical router. Router secure pairing, live RouterOS control, heartbeat/status updates, customer captive portal, voucher redemption on the router and router event processing are still to be built and tested. Manual payment confirmation and one-code issuance are implemented as the owner-side workflow; no online payment provider is connected.
 
 A private router address such as `192.168.88.1` cannot be reached directly from a public Cloudflare Worker. Do not expose an unrestricted router API port to the internet. The next integration step is a short-lived pairing flow and a router-side connector that initiates outbound HTTPS. See `docs/router-connection.md`.
 
@@ -62,7 +62,7 @@ src/index.js                         Cloudflare Worker API
 public/index.html                    Browser application and onboarding form
 public/css/style.css                 Application styles
 public/js/app.js                     Authentication and onboarding logic
-database/register_wifi_business.sql  Atomic Supabase registration RPC
+database/register_wifi_business.sql  Atomic Supabase registration RPC\ndatabase/global_unique_voucher_generation.sql  Global unique voucher generator\ndatabase/protect_redeemed_voucher_history.sql  Voucher history protection\ndatabase/manual_paid_voucher_issue.sql  Manual paid-voucher issuance and sales ledger
 docs/router-connection.md            Secure router pairing plan
 tests/worker.test.js                 Basic Worker tests
 .github/workflows/deploy.yml         Test and deploy workflow
