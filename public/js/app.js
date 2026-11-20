@@ -136,6 +136,18 @@ async function loadPlatformStats() {
     };
     $("chart-active-label").textContent = number(stats.businesses_active);
     $("chart-pending-label").textContent = number(stats.businesses_pending);
+    $("chart-active-value").textContent = number(stats.businesses_active);
+    $("chart-pending-value").textContent = number(stats.businesses_pending);
+    $("business-donut-total").textContent = number(stats.businesses_total);
+    const businessTotal = Number(stats.businesses_total || 0);
+    const activeShare = businessTotal ? Number(stats.businesses_active || 0) / businessTotal * 100 : 0;
+    $("business-donut").style.setProperty("--active-share", activeShare + "%");
+    $("router-donut-total").textContent = number(stats.routers_total);
+    $("router-online-legend").textContent = number(stats.routers_online);
+    $("router-offline-legend").textContent = number(Math.max(0, Number(stats.routers_total || 0) - Number(stats.routers_online || 0)));
+    const routerTotal = Number(stats.routers_total || 0);
+    const routerShare = routerTotal ? Number(stats.routers_online || 0) / routerTotal * 100 : 0;
+    $("router-donut").style.setProperty("--active-share", routerShare + "%");
     $("chart-routers-label").textContent = number(stats.routers_online) + " / " + number(stats.routers_total);
     $("chart-sessions-label").textContent = number(stats.sessions_active);
     $("chart-customers-label").textContent = number(stats.customers_total);
