@@ -141,3 +141,15 @@
 .chat-send-form textarea{flex:1;min-width:0;resize:vertical;padding:11px;border:1px solid #cfd8e6;border-radius:9px;font:inherit}
 .chat-send-form button{flex:0 0 auto}
 @media(max-width:700px){.chat-layout{grid-template-columns:1fr}.chat-thread{min-height:430px}.chat-conversations{max-height:180px}.chat-thread-head{position:sticky;top:0;background:#fbfcff}}
+
+
+/* Business-owned Wi-Fi package management */
+.package-manager { margin: 1rem 0 1.25rem; padding: 1rem; border: 1px solid var(--border, #d8deea); border-radius: 14px; background: var(--surface, #fff); }
+.package-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .75rem; margin-top: .8rem; }
+.package-form label { display: flex; flex-direction: column; gap: .35rem; font-size: .9rem; font-weight: 600; }
+.package-form input, .package-form select, .package-form textarea { width: 100%; min-width: 0; padding: .7rem; border: 1px solid #cbd3e1; border-radius: 9px; font: inherit; background: #fff; color: #17243b; }
+.package-form .full-span { grid-column: 1 / -1; }
+.package-form-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.package-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+.package-actions button { min-width: 88px; }
+.package-manager + h3 { margin-top: 1rem; }
