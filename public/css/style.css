@@ -93,3 +93,18 @@
 .simulation-actions{display:flex;gap:9px;flex-wrap:wrap}
 @media(max-width:600px){.compact-steps{grid-template-columns:1fr}.help-trigger{padding:7px 8px;font-size:.72rem}.guide-actions button{width:100%}.router-lab{padding:14px}}
 \n.router-checklist{padding-left:24px;color:#53627c;font-size:.88rem;line-height:1.65}.router-checklist li{padding:3px 0}\n
+.support-compose{margin:20px 0;padding:16px;border:1px solid #dce4f2;border-radius:14px;background:#f8faff}
+.support-compose h3{margin-top:0}
+.support-compose label{display:grid;gap:6px;font-size:.86rem;font-weight:650;color:#344563}
+.support-compose input,.support-compose textarea,.support-compose select{width:100%;padding:11px;border:1px solid #d4dceb;border-radius:9px;background:#fff;color:#1b2a49;font:inherit}
+.admin-inbox{margin-top:20px}
+.support-summary{padding:10px 12px;background:#f0f4fb;border-radius:9px;color:#40516f;font-weight:700;font-size:.84rem;margin:12px 0}
+.support-message-card{padding:15px;border:1px solid #dce4f2;border-radius:12px;background:#fff}
+.support-message-card .dashboard-head{gap:10px}
+.support-message-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;color:#263752}
+.support-status{font-size:.68rem;font-weight:850;border-radius:20px;padding:5px 9px;background:#edf1f7;color:#5b6680}
+.support-status.status-new{background:#fff1d7;color:#865700}
+.support-status.status-read{background:#e8f0ff;color:#2852a1}
+.support-status.status-closed{background:#e7f5ed;color:#26734d}
+.support-actions{display:flex;gap:7px;flex-wrap:wrap}
+.support-actions button{font-size:.78rem;padding:8px 10px}
