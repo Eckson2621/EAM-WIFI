@@ -28,7 +28,7 @@ $("guide-confirm").addEventListener("click", () => {
 });
 $("guide-skip").addEventListener("click", finishGuide);
 $("open-help").addEventListener("click", () => {
-  helpReturnTarget = ["platform-admin", "dashboard", "business-onboarding"].find((id) => !$(`${id}`).classList.contains("hidden")) || null;
+  helpReturnTarget = ["platform-admin", "dashboard", "business-onboarding"].find((id) => !$(id).classList.contains("hidden")) || null;
   $("welcome-guide").classList.remove("hidden");
   $("auth-panel").classList.add("hidden");
   $("business-onboarding").classList.add("hidden");
