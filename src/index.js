@@ -39,6 +39,37 @@ async function handleApi(request, env) {
     return json({ ok: true, app: "EAM-WIFI", supabase_project: "configured", timestamp: new Date().toISOString() });
   }
 
+
+  if (path === "/api/register-business" && request.method === "POST") {
+    const token = getToken(request);
+    if (!token) return json({ error: "Authentication required." }, 401);
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const params = {
+      p_owner_name: input.owner_name,
+      p_business_name: input.business_name,
+      p_contact_phone: input.contact_phone,
+      p_country_code: input.country_code,
+      p_currency_code: input.currency_code,
+      p_timezone: input.timezone,
+      p_site_name: input.site_name,
+      p_site_address: input.site_address || null,
+      p_router_name: input.router_name,
+      p_router_vendor: input.router_vendor,
+      p_router_model: input.router_model || null,
+      p_integration_type: input.integration_type,
+      p_management_address: input.management_address || null,
+      p_api_port: input.api_port ? Number(input.api_port) : null
+    };
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/register_wifi_business", {
+      method: "POST", body: JSON.stringify(params)
+    }, token);
+    return new Response(await upstream.text(), {
+      status: upstream.status,
+      headers: { ...JSON_HEADERS, "cache-control": "no-store" }
+    });
+  }
+
   if (path === "/api/auth/signup" && request.method === "POST") {
     return proxyAuth(request, env, "/auth/v1/signup");
   }
@@ -64,7 +95,7 @@ async function handleApi(request, env) {
   if (path === "/api/organizations" && request.method === "GET") {
     const upstream = await supabaseFetch(
       env,
-      "/rest/v1/organization_members?select=organization_id,role,status&order=created_at.asc",
+      "/rest/v1/organization_members?select=organization_id,role,status,organization:organizations(id,name,status,slug)&order=created_at.asc",
       { method: "GET" },
       token
     );
