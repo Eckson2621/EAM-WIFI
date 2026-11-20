@@ -26,6 +26,15 @@
         <button id="signup-tab" class="tab" type="button">Create account</button>
       </div>
       <form id="auth-form">
+        <div id="signup-details" class="registration-grid hidden">
+          <label>Owner full name<input id="signup-owner" autocomplete="name" minlength="2" maxlength="120"></label>
+          <label>Business name<input id="signup-business" minlength="2" maxlength="120"></label>
+          <label>Business phone number<input id="signup-phone" type="tel" autocomplete="tel" minlength="7" placeholder="+255..."></label>
+          <label>Country code<input id="signup-country" value="TZ" maxlength="2" pattern="[A-Za-z]{2}"></label>
+          <label>Region / State<input id="signup-region" maxlength="100" placeholder="e.g. Dar es Salaam"></label>
+          <label>District / City<input id="signup-district" maxlength="100" placeholder="e.g. Kinondoni"></label>
+          <label class="full-span">Business physical address<input id="signup-address" maxlength="250" placeholder="Street, ward, area or landmark"></label>
+        </div>
         <label>Email address<input id="email" type="email" autocomplete="email" required></label>
         <label>Password<input id="password" type="password" minlength="8" autocomplete="current-password" required></label>
         <button id="submit-auth" class="primary" type="submit">Sign in</button>
@@ -38,7 +47,7 @@
         <div><p class="eyebrow">BUSINESS SETUP</p><h2>Register your Wi-Fi business</h2></div>
         <button id="onboarding-signout" class="secondary" type="button">Sign out</button>
       </div>
-      <p class="muted">Enter your business, hotspot location and router details. Router credentials are not requested here; secure device pairing is a separate step.</p>
+      <p class="muted">Complete your hotspot site and router setup. After submission, call the Super Admin for account approval. Your service stays locked until approval.</p>
       <form id="business-form" class="registration-grid">
         <label>Business name<input name="business_name" required minlength="2" maxlength="120" placeholder="Enter your business name first"></label>
         <label>Owner full name<input name="owner_name" required minlength="2" autocomplete="name"></label>
@@ -47,7 +56,7 @@
         <label>Currency code<input name="currency_code" required value="TZS" maxlength="3" pattern="[A-Za-z]{3}" title="Three-letter currency code, e.g. TZS"></label>
         <label>Time zone<input name="timezone" required value="Africa/Dar_es_Salaam" placeholder="Africa/Dar_es_Salaam"></label>
         <label>Hotspot site / branch name<input name="site_name" required minlength="2" placeholder="e.g. Mlimani Main Site"></label>
-        <label>Physical location / address<input name="site_address" placeholder="Street, area, city"></label>
+        <label>Physical location / address<input name="site_address" required placeholder="Street, area, city"></label>
         <label>Router display name<input name="router_name" required placeholder="e.g. Main Router"></label>
         <label>Router brand
           <select name="router_vendor" required>
@@ -112,7 +121,7 @@
         <div class="stat-card"><span>Subscription revenue this month</span><strong id="stat-month-revenue">TZS —</strong></div>
         <div class="stat-card"><span>All-time subscription revenue</span><strong id="stat-total-revenue">TZS —</strong></div>
       </div>
-      <div class="admin-section-head"><h3>Business subscriptions</h3><p class="muted">Confirm the owner's monthly payment of TSh 6,000 after speaking with them. Approval activates the business for one month.</p></div>
+      <div class="admin-section-head"><h3>Business subscriptions</h3><p class="muted">Choose how many months to authorize after confirming the customer's request and payment. Monthly reference price: TSh 6,000.</p></div>
       <div id="platform-accounts" class="stack"><p class="muted">Loading business accounts…</p></div>
       <p id="platform-admin-message" class="message" role="status"></p>
     </section>
