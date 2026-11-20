@@ -15,3 +15,26 @@
 .stat-card strong{display:block;color:#14264b;font-size:1.45rem;margin-top:8px;overflow-wrap:anywhere}
 .admin-section-head{margin:18px 0 12px}.admin-section-head h3{margin:0 0 4px}.admin-section-head p{margin:0;font-size:.85rem}
 @media(min-width:700px){.admin-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* Modern Super Admin visual layer: animated accents are intentionally limited to text and chart fills. */
+#platform-admin{max-width:100%;overflow:hidden;background:radial-gradient(ellipse at 8% 0%,#eef4ff 0,transparent 36%),#fff}
+#platform-admin .eyebrow,#platform-admin .dashboard-head h2,#platform-admin .stat-card strong,#platform-admin .chart-heading h3{animation:adminTextGlow 9s ease-in-out infinite alternate}
+#platform-admin .dashboard-head h2{font-weight:850;letter-spacing:-.035em}
+#platform-admin .stat-card{position:relative;overflow:hidden;transition:transform .25s ease,box-shadow .25s ease;border-radius:16px}
+#platform-admin .stat-card:after{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,#477bff,#9a62f5,#23c6a7);background-size:100% 220%;animation:chartFlow 5s linear infinite}
+#platform-admin .stat-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px #284b8b18}
+.admin-visuals{display:grid;grid-template-columns:1fr;gap:14px;margin:8px 0 28px}
+.chart-panel{min-width:0;padding:19px;border:1px solid #e1e8f4;border-radius:16px;background:linear-gradient(145deg,#fbfdff,#f4f7ff);box-shadow:0 10px 26px #24395b0b}
+.chart-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.chart-heading .eyebrow{margin:0 0 4px}.chart-heading h3{margin:0!important;font-size:1.08rem}
+.live-indicator{font-size:.65rem;font-weight:850;letter-spacing:.09em;color:#16866e;white-space:nowrap}
+.live-indicator:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#20c997;margin-right:6px;box-shadow:0 0 0 4px #20c99720;animation:livePulse 1.8s infinite}
+.metric-bar{margin:15px 0}.metric-bar>div:first-child{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;color:#53627c;font-size:.82rem}
+.metric-bar strong{color:#1b2c4d;font-variant-numeric:tabular-nums}
+.bar-track{height:10px;border-radius:20px;background:#e4eaf5;overflow:hidden}
+.bar-fill{display:block;height:100%;width:0;border-radius:20px;background:linear-gradient(90deg,#477bff,#8d63e9,#22c6a7);background-size:220% 100%;animation:chartFlow 5s linear infinite;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+@keyframes adminTextGlow{0%{color:#294fa9;text-shadow:0 0 0 #477bff00}50%{color:#7954bf;text-shadow:0 0 13px #8d63e933}100%{color:#087f78;text-shadow:0 0 12px #20c9972b}}
+@keyframes chartFlow{0%{background-position:0% 50%}100%{background-position:220% 50%}}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.78)}}
+@media(min-width:760px){.admin-visuals{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){#platform-admin *,#platform-admin *:before,#platform-admin *:after{animation:none!important;transition:none!important}}
