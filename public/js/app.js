@@ -388,6 +388,13 @@ async function loadPackages(organizationId, role = "operator") {
 }
 
 
+$("admin-register-business").addEventListener("click", () => {
+  $("platform-admin").classList.add("hidden");
+  $("dashboard").classList.add("hidden");
+  $("business-onboarding").classList.remove("hidden");
+  $("business-onboarding").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 $("business-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = $("business-submit");
