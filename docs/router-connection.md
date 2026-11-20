@@ -1,0 +1,33 @@
+# Router connection plan
+
+## What registration captures
+
+The business onboarding form records:
+- Router brand and model.
+- Hotspot site and physical address.
+- Router display name.
+- Integration mode.
+- Optional LAN management address and API port as setup references only.
+
+No router password, API secret, or shared key is collected or written to the public database by this registration flow.
+
+## Important network limitation
+
+A router LAN address such as `192.168.88.1` is private and cannot be reached directly from a public Cloudflare Worker. A public router API port should not be exposed to the internet just to make the dashboard work.
+
+## Secure pairing design to implement next
+
+1. The authenticated business owner requests a one-time pairing challenge from EAM-WIFI.
+2. EAM-WIFI issues a short-lived, single-use pairing token.
+3. The router-side agent/script initiates an outbound HTTPS connection to the EAM-WIFI Worker.
+4. The router proves possession of the pairing token and registers its device identity.
+5. The system stores only the minimum device metadata and a revocable credential hash or encrypted secret in a restricted secret store.
+6. Router events and heartbeats are sent over authenticated HTTPS; tokens can be rotated and revoked.
+
+For MikroTik, the next implementation should use a RouterOS-compatible outbound script or a small local connector. Do not enable an unrestricted public RouterOS API port. Credentials must never be placed in browser JavaScript, GitHub, ordinary logs, or the general `network_devices.config` JSON field.
+
+## Current implementation status
+
+The registration RPC creates the organization, owner membership, hotspot site, router metadata record, and organization settings in one database transaction. It marks the organization as `pending` and the router as `not_configured`.
+
+**This is registration, not a live router connection.** Device pairing, RouterOS command execution, live status/heartbeat, captive portal, and real customer session enforcement are still to be implemented and tested.
