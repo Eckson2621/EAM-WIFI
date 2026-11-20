@@ -14,3 +14,12 @@ test("protected endpoints reject requests without a bearer token", async () => {
   const response = await worker.fetch(new Request("https://example.test/api/organizations"), {});
   assert.equal(response.status, 401);
 });
+
+test("business registration endpoint rejects unauthenticated requests", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/register-business", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ business_name: "Test Wi-Fi" })
+  }), {});
+  assert.equal(response.status, 401);
+});
