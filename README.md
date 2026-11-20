@@ -45,14 +45,14 @@ Automatic deployment is configured through GitHub Actions in `.github/workflows/
 ## Important limitations in this first scaffold
 
 - Organization creation and owner/admin screens are not implemented yet.
-- Router integrations, captive portal, voucher redemption, payment collection, and router event processing are not implemented yet.
+- Router secure pairing, live RouterOS control, captive portal, voucher redemption, payment collection, and router event processing are not implemented yet. Registration stores router metadata only; it does not connect the router. See `docs/router-connection.md`.
 - Access is limited by the existing Supabase grants and RLS policies. Test with real authenticated accounts from separate organizations before production use.
 - Browser sign-in state is held in session storage and is cleared on sign-out; this is a starter implementation, not a full production session-management design.
 
 ## Repository layout
 
 ```text
-src/index.js             Cloudflare Worker API
+src/index.js             Cloudflare Worker API\ndatabase/register_wifi_business.sql  Atomic registration RPC\ndocs/router-connection.md  Secure router pairing plan
 public/index.html        Browser application
 public/css/style.css     Application styles
 public/js/app.js         Browser authentication and workspace UI
