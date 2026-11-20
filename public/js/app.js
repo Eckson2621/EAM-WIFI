@@ -36,9 +36,9 @@ function saveSession(value) {
 }
 
 async function loadWorkspace() {
-  $("auth-panel").classList.add("hidden");
   const user = await api("/api/auth/user");
   const memberships = await api("/api/organizations");
+  $("auth-panel").classList.add("hidden");
   if (!memberships.length) {
     $("dashboard").classList.add("hidden");
     $("business-onboarding").classList.remove("hidden");
@@ -154,7 +154,7 @@ $("auth-form").addEventListener("submit", async (event) => {
   }
 });
 
-$("signout").addEventListener("click", async () => {
+async function signOut() {
   try {
     if (session?.access_token) await api("/api/auth/logout", { method: "POST" });
   } catch {
@@ -166,7 +166,9 @@ $("signout").addEventListener("click", async () => {
   $("auth-panel").classList.remove("hidden");
   $("password").value = "";
   showMessage("You have signed out.", false);
-});
+}
+$("signout").addEventListener("click", signOut);
+$("onboarding-signout").addEventListener("click", signOut);
 
 (async function init() {
   try {
