@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b33">
   <title>EAM-WIFI | Hotspot Management</title>
   <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/app.js?v=20261120-12" defer></script>
+  <script src="/js/app.js?v=20261121-01" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -38,6 +38,18 @@
       <div class="guide-callout"><strong>Live router connection status · Hali ya muunganisho halisi</strong><p>This release includes router registration and a local practice simulator. The secure live MikroTik pairing/management connector and model-specific connection credentials are not yet verified as operational. Therefore, do not assume that entering a router IP or API port connects the router. We will provide the exact endpoint, port and pairing steps only after the connector is implemented and tested. Keep the router protected in the meantime.</p></div>
       <h3>Before connecting a real MikroTik</h3>
       <ol class="router-checklist"><li>Write down the router model and RouterOS version.</li><li>Back up the current router configuration before making changes.</li><li>Confirm the router has internet access and you can manage it locally.</li><li>Configure a separate client-facing Hotspot network and test its login page with a phone.</li><li>Keep management access limited; do not open WinBox, SSH or API ports to everyone on the internet.</li><li>Wait for EAM-WIFI's verified pairing instructions before creating integration credentials or enabling remote access.</li></ol>
+
+      <section class="support-compose">
+        <h3>Need help? Message the Super Admin · Unahitaji msaada?</h3>
+        <p class="muted small">Sign in first, then send a message. Your account email and business reference (if selected) will be attached automatically.</p>
+        <form id="support-form" class="stack">
+          <label>Help topic<select id="support-category" required><option value="general">General help</option><option value="account">Account / login</option><option value="business_setup">Business registration</option><option value="router_connection">Router connection</option><option value="vouchers">Packages and vouchers</option><option value="payments">Payments / subscription</option><option value="technical_issue">Technical problem</option></select></label>
+          <label>Subject<input id="support-subject" required minlength="3" maxlength="140" placeholder="Briefly describe where you are stuck"></label>
+          <label>Your message<textarea id="support-message" required minlength="10" maxlength="4000" rows="4" placeholder="Explain what happened and what you were trying to do..."></textarea></label>
+          <button id="support-send" class="primary" type="submit">Send message to Super Admin</button>
+          <p id="support-feedback" class="message" role="status"></p>
+        </form>
+      </section>
       <label class="guide-understood"><input id="guide-understood" type="checkbox"> I have read and understood the basic safety and setup information. / Nimesoma na kuelewa maelezo ya msingi.</label>
       <div class="guide-actions"><button id="guide-confirm" class="primary" type="button" disabled>I understand, continue · Nimeelewa, endelea</button><button id="guide-skip" class="secondary" type="button">Skip for now · Ruka kwa sasa</button></div>
       <p class="muted small">You can reopen this guide later from “Help / Msaada” at the top of the page.</p>
@@ -149,6 +161,13 @@
       </div>
       <div class="admin-section-head"><h3>Business subscriptions</h3><p class="muted">Choose how many months to authorize after confirming the customer's request and payment. Monthly reference price: TSh 6,000.</p></div>
       <div id="platform-accounts" class="stack"><p class="muted">Loading business accounts…</p></div>
+
+      <section class="panel admin-inbox">
+        <div class="dashboard-head"><div><p class="eyebrow">CUSTOMER SUPPORT</p><h3>Support inbox · Jumbe za msaada</h3></div><button id="support-refresh" class="secondary" type="button">Refresh inbox</button></div>
+        <p class="muted small">Read messages sent by signed-in users. Change status to track new, read and closed requests.</p>
+        <div id="support-inbox-summary" class="support-summary"></div>
+        <div id="support-inbox" class="stack"><p class="muted">Loading support messages…</p></div>
+      </section>
       <p id="platform-admin-message" class="message" role="status"></p>
     </section>
     <section id="dashboard" class="panel hidden">
