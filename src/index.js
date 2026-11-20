@@ -177,12 +177,17 @@ async function handleApi(request, env) {
     if (!["cash", "mobile_money", "bank_transfer", "other"].includes(input.payment_method)) {
       return json({ error: "Select a valid payment method." }, 400);
     }
-    const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_approve_subscription", {
+    const months = Number(input.months || 1);
+    if (!Number.isInteger(months) || months < 1 || months > 60) {
+      return json({ error: "Subscription duration must be between 1 and 60 months." }, 400);
+    }
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_approve_subscription_period", {
       method: "POST",
       body: JSON.stringify({
         p_organization_id: input.organization_id,
         p_payment_method: input.payment_method,
-        p_payment_reference: input.payment_reference || null
+        p_payment_reference: input.payment_reference || null,
+        p_months: months
       })
     }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
