@@ -393,7 +393,29 @@ async function loadPackages(organizationId, role = "operator") {
 }
 
 
-$("admin-open-business").addEventListener("click", () => {\n  $("platform-admin").classList.add("hidden");\n  $("business-onboarding").classList.add("hidden");\n  $("dashboard").classList.remove("hidden");\n  $("dashboard").scrollIntoView({ behavior: "smooth", block: "start" });\n});\n\n$("business-back-admin").addEventListener("click", async () => {\n  $("dashboard").classList.add("hidden");\n  $("platform-admin").classList.remove("hidden");\n  $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });\n  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);\n});\n\n$("onboarding-back-admin").addEventListener("click", async () => {\n  $("business-onboarding").classList.add("hidden");\n  $("dashboard").classList.add("hidden");\n  $("platform-admin").classList.remove("hidden");\n  $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });\n  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);\n});\n\n$("admin-register-business").addEventListener("click", () => {
+$("admin-open-business").addEventListener("click", () => {
+  $("platform-admin").classList.add("hidden");
+  $("business-onboarding").classList.add("hidden");
+  $("dashboard").classList.remove("hidden");
+  $("dashboard").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+$("business-back-admin").addEventListener("click", async () => {
+  $("dashboard").classList.add("hidden");
+  $("platform-admin").classList.remove("hidden");
+  $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });
+  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);
+});
+
+$("onboarding-back-admin").addEventListener("click", async () => {
+  $("business-onboarding").classList.add("hidden");
+  $("dashboard").classList.add("hidden");
+  $("platform-admin").classList.remove("hidden");
+  $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });
+  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);
+});
+
+$("admin-register-business").addEventListener("click", () => {
   $("platform-admin").classList.add("hidden");
   $("dashboard").classList.add("hidden");
   $("business-onboarding").classList.remove("hidden");
