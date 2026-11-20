@@ -426,24 +426,65 @@ async function handleApi(request, env) {
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
 
-  if (path === "/api/packages" && request.method === "GET") {
+  if (path === "/api/packages" && ["GET", "POST", "PATCH", "DELETE"].includes(request.method)) {
     const organizationId = url.searchParams.get("organization_id");
-    if (!organizationId || !/^[0-9a-f-]{36}$/i.test(organizationId)) {
+    const packageId = url.searchParams.get("id");
+    if (request.method === "GET" && (!organizationId || !/^[0-9a-f-]{36}$/i.test(organizationId))) {
       return json({ error: "A valid organization_id is required." }, 400);
     }
-    const subscriptionCheck = await supabaseFetch(env, "/rest/v1/rpc/platform_subscription_status", {
-      method: "POST", body: JSON.stringify({ p_organization_id: organizationId })
-    }, token);
-    if (!subscriptionCheck.ok) {
-      return new Response(await subscriptionCheck.text(), { status: subscriptionCheck.status, headers: JSON_HEADERS });
+    let input = {};
+    if (["POST", "PATCH"].includes(request.method)) {
+      try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
     }
+    const orgId = request.method === "GET" ? organizationId : String(input.organization_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(orgId)) return json({ error: "A valid organization_id is required." }, 400);
+    if (["PATCH", "DELETE"].includes(request.method) && !/^[0-9a-f-]{36}$/i.test(packageId || "")) {
+      return json({ error: "A valid package id is required." }, 400);
+    }
+    const subscriptionCheck = await supabaseFetch(env, "/rest/v1/rpc/platform_subscription_status", {
+      method: "POST", body: JSON.stringify({ p_organization_id: orgId })
+    }, token);
+    if (!subscriptionCheck.ok) return new Response(await subscriptionCheck.text(), { status: subscriptionCheck.status, headers: JSON_HEADERS });
     const subscription = await subscriptionCheck.json();
     if (!subscription?.active) return json({ error: "EAM-WIFI subscription is pending or expired. Contact the platform administrator." }, 403);
+
+    const fields = ["name","description","price_tzs","duration_seconds","validity_seconds","data_limit_bytes","speed_down_kbps","speed_up_kbps","max_devices","session_mode","is_active","display_order"];
+    if (request.method === "POST") {
+      const name = String(input.name || "").trim();
+      const price = Number(input.price_tzs);
+      const duration = Number(input.duration_seconds);
+      if (name.length < 2 || name.length > 100) return json({ error: "Package name must be 2–100 characters." }, 400);
+      if (!Number.isSafeInteger(price) || price < 0) return json({ error: "Enter a valid whole-number price in TZS." }, 400);
+      if (!Number.isInteger(duration) || duration < 1) return json({ error: "Duration must be at least one second." }, 400);
+      if (input.session_mode && !["connected_time","wall_clock"].includes(input.session_mode)) return json({ error: "Invalid session mode." }, 400);
+      const payload = { organization_id: orgId, name, description: String(input.description || "").trim() || null, price_tzs: price, duration_seconds: duration, validity_seconds: input.validity_seconds ? Number(input.validity_seconds) : null, data_limit_bytes: input.data_limit_bytes ? Number(input.data_limit_bytes) : null, speed_down_kbps: input.speed_down_kbps ? Number(input.speed_down_kbps) : null, speed_up_kbps: input.speed_up_kbps ? Number(input.speed_up_kbps) : null, max_devices: Number(input.max_devices || 1), session_mode: input.session_mode || "connected_time", is_active: input.is_active !== false, display_order: Number(input.display_order || 0) };
+      for (const key of ["validity_seconds","data_limit_bytes","speed_down_kbps","speed_up_kbps"]) if (payload[key] !== null && (!Number.isSafeInteger(payload[key]) || payload[key] < 1)) return json({ error: "Optional validity, data and speed limits must be positive whole numbers." }, 400);
+      if (!Number.isInteger(payload.max_devices) || payload.max_devices < 1 || payload.max_devices > 50) return json({ error: "Maximum devices must be from 1 to 50." }, 400);
+      const upstream = await supabaseFetch(env, "/rest/v1/wifi_packages?select=*", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload) }, token);
+      return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+    }
+    if (request.method === "PATCH") {
+      const payload = {};
+      for (const key of fields) if (Object.prototype.hasOwnProperty.call(input, key)) payload[key] = input[key];
+      if (payload.name !== undefined) payload.name = String(payload.name).trim();
+      if (payload.name !== undefined && (payload.name.length < 2 || payload.name.length > 100)) return json({ error: "Package name must be 2–100 characters." }, 400);
+      if (payload.session_mode !== undefined && !["connected_time","wall_clock"].includes(payload.session_mode)) return json({ error: "Invalid session mode." }, 400);
+      const query = new URLSearchParams({ id: `eq.${packageId}`, organization_id: `eq.${orgId}`, select: "*" });
+      const upstream = await supabaseFetch(env, `/rest/v1/wifi_packages?${query}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload) }, token);
+      return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+    }
+    if (request.method === "DELETE") {
+      const query = new URLSearchParams({ id: `eq.${packageId}`, organization_id: `eq.${orgId}` });
+      const upstream = await supabaseFetch(env, `/rest/v1/wifi_packages?${query}`, { method: "DELETE", headers: { Prefer: "return=representation" } }, token);
+      const body = await upstream.text();
+      if (!upstream.ok) return new Response(body, { status: upstream.status, headers: JSON_HEADERS });
+      if (body.trim() === "[]") return json({ error: "Package not found or you do not have permission to delete it." }, 404);
+      return new Response(body, { status: 200, headers: JSON_HEADERS });
+    }
     const query = new URLSearchParams({
       select: "id,organization_id,name,description,price_tzs,duration_seconds,validity_seconds,data_limit_bytes,speed_down_kbps,speed_up_kbps,max_devices,session_mode,is_active,display_order",
-      organization_id: `eq.${organizationId}`,
-      is_active: "eq.true",
-      order: "display_order.asc"
+      organization_id: `eq.${orgId}`,
+      order: "display_order.asc,created_at.asc"
     });
     const upstream = await supabaseFetch(env, `/rest/v1/wifi_packages?${query}`, { method: "GET" }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
