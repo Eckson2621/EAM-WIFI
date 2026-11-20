@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b33">
   <title>EAM-WIFI | Hotspot Management</title>
   <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/app.js?v=20261121-01" defer></script>
+  <script src="/js/app.js?v=20261121-02" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -49,6 +49,10 @@
           <button id="support-send" class="primary" type="submit">Send message to Super Admin</button>
           <p id="support-feedback" class="message" role="status"></p>
         </form>
+        <div class="support-own-history">
+          <div class="dashboard-head"><strong>My support conversations · Mazungumzo yangu</strong><button id="support-own-refresh" class="secondary" type="button">Refresh</button></div>
+          <div id="support-own-list" class="stack"><p class="muted small">Sign in to view your support conversations and replies.</p></div>
+        </div>
       </section>
       <label class="guide-understood"><input id="guide-understood" type="checkbox"> I have read and understood the basic safety and setup information. / Nimesoma na kuelewa maelezo ya msingi.</label>
       <div class="guide-actions"><button id="guide-confirm" class="primary" type="button" disabled>I understand, continue · Nimeelewa, endelea</button><button id="guide-skip" class="secondary" type="button">Skip for now · Ruka kwa sasa</button></div>
