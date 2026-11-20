@@ -32,6 +32,49 @@
       </form>
       <p id="auth-message" class="message" role="status"></p>
     </section>
+
+    <section id="business-onboarding" class="panel hidden">
+      <p class="eyebrow">BUSINESS SETUP</p>
+      <h2>Register your Wi-Fi business</h2>
+      <p class="muted">Enter your business, hotspot location and router details. Router credentials are not requested here; secure device pairing is a separate step.</p>
+      <form id="business-form" class="registration-grid">
+        <label>Owner full name<input name="owner_name" required minlength="2" autocomplete="name"></label>
+        <label>Business / Wi-Fi brand name<input name="business_name" required minlength="2" maxlength="120" placeholder="e.g. Eckson Wi-Fi"></label>
+        <label>Business phone number<input name="contact_phone" type="tel" required minlength="7" placeholder="+255..."></label>
+        <label>Country code<input name="country_code" required value="TZ" maxlength="2" pattern="[A-Za-z]{2}" title="Two-letter country code, e.g. TZ"></label>
+        <label>Currency code<input name="currency_code" required value="TZS" maxlength="3" pattern="[A-Za-z]{3}" title="Three-letter currency code, e.g. TZS"></label>
+        <label>Time zone<input name="timezone" required value="Africa/Dar_es_Salaam" placeholder="Africa/Dar_es_Salaam"></label>
+        <label>Hotspot site / branch name<input name="site_name" required minlength="2" placeholder="e.g. Mlimani Main Site"></label>
+        <label>Physical location / address<input name="site_address" placeholder="Street, area, city"></label>
+        <label>Router display name<input name="router_name" required placeholder="e.g. Main Router"></label>
+        <label>Router brand
+          <select name="router_vendor" required>
+            <option value="mikrotik">MikroTik</option>
+            <option value="ubiquiti">Ubiquiti</option>
+            <option value="tp_link">TP-Link</option>
+            <option value="huawei">Huawei</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label>Router model<input name="router_model" placeholder="e.g. hEX, RB4011, CCR"></label>
+        <label>Integration type
+          <select name="integration_type" required>
+            <option value="mikrotik_hotspot">MikroTik Hotspot</option>
+            <option value="routeros_api">RouterOS API</option>
+            <option value="manual">Manual setup (temporary)</option>
+            <option value="other">Other / to be confirmed</option>
+          </select>
+        </label>
+        <label>Router LAN IP (optional)<input name="management_address" placeholder="e.g. 192.168.88.1"></label>
+        <label>Router API port (optional)<input name="api_port" type="number" min="1" max="65535" placeholder="8729"></label>
+        <div class="form-note">
+          <strong>Security notice</strong>
+          <p>Do not enter your router password or API secret here. The address and port are saved only as setup references. They do not create a live connection by themselves.</p>
+        </div>
+        <button id="business-submit" class="primary" type="submit">Register business and hotspot</button>
+      </form>
+      <p id="business-message" class="message" role="status"></p>
+    </section>
     <section id="dashboard" class="panel hidden">
       <div class="dashboard-head">
         <div><p class="eyebrow">ACCOUNT</p><h2 id="welcome">Your workspace</h2></div>
