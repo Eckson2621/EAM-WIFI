@@ -8,3 +8,10 @@
 .voucher-code{font-weight:800;letter-spacing:.08em;font-size:1.05rem;background:#f2f6ff!important;border-color:#b8c9ff!important}
 
 .portal-link{display:inline-block;margin-top:8px;color:#244db2;font-weight:700;text-decoration:none}.portal-link:hover{text-decoration:underline}
+
+.admin-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0 28px}
+.stat-card{padding:16px;border:1px solid #dfe6f1;border-radius:12px;background:linear-gradient(145deg,#fff,#f5f8ff);min-width:0}
+.stat-card span{display:block;color:#66738b;font-size:.78rem;line-height:1.4}
+.stat-card strong{display:block;color:#14264b;font-size:1.45rem;margin-top:8px;overflow-wrap:anywhere}
+.admin-section-head{margin:18px 0 12px}.admin-section-head h3{margin:0 0 4px}.admin-section-head p{margin:0;font-size:.85rem}
+@media(min-width:700px){.admin-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
