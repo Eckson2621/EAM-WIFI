@@ -45,7 +45,7 @@ Never paste Cloudflare tokens, Supabase service-role keys, router passwords or p
 
 Registration creates the router record but does **not** connect to the physical router. Router secure pairing, live RouterOS control, heartbeat/status updates, and processing the queued voucher redemption event to create/enable the MikroTik Hotspot user are still to be built and tested. The customer portal and database voucher validation queue exist, but a redeemed voucher does not provide internet until the paired MikroTik connector activates its queued session. Manual payment confirmation and one-code issuance are implemented as the owner-side workflow; no online payment provider is connected.
 
-A private router address such as `192.168.88.1` cannot be reached directly from a public Cloudflare Worker. Do not expose an unrestricted router API port to the internet. The next integration step is a short-lived pairing flow and a router-side connector that initiates outbound HTTPS. See `docs/router-connection.md` and `docs/customer-portal.md`.
+A private router address such as `192.168.88.1` cannot be reached directly from a public Cloudflare Worker. Do not expose an unrestricted router API port to the internet. The next integration step is a short-lived pairing flow and a router-side connector that initiates outbound HTTPS. See `docs/router-connection.md`, `docs/customer-portal.md` and the selected equipment plan in `docs/hardware-deployment.md`.
 
 ## Security status
 
