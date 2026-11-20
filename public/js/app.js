@@ -141,8 +141,8 @@ $("auth-form").addEventListener("submit", async (event) => {
       body: JSON.stringify({ email: $("email").value.trim(), password: $("password").value })
     });
     if (!result.access_token) {
-      showMessage("Account created. Check your email if confirmation is enabled, then sign in.", false);
       setMode("signin");
+      showMessage("Account created. If email confirmation is enabled, confirm your email, then sign in to complete business and router registration.", false);
       return;
     }
     saveSession(result);
@@ -154,8 +154,14 @@ $("auth-form").addEventListener("submit", async (event) => {
   }
 });
 
-$("signout").addEventListener("click", () => {
+$("signout").addEventListener("click", async () => {
+  try {
+    if (session?.access_token) await api("/api/auth/logout", { method: "POST" });
+  } catch {
+    // Always clear the browser session, even if the network is unavailable.
+  }
   saveSession(null);
+  $("business-onboarding").classList.add("hidden");
   $("dashboard").classList.add("hidden");
   $("auth-panel").classList.remove("hidden");
   $("password").value = "";
