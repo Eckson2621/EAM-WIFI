@@ -65,13 +65,13 @@ async function loadWorkspace() {
     button.textContent = "View packages";
     button.disabled = orgStatus !== "active";
     if (orgStatus !== "active") button.title = "Your business is awaiting platform approval.";
-    button.addEventListener("click", () => loadPackages(membership.organization_id));
+    button.addEventListener("click", () => loadPackages(membership.organization_id, membership.role));
     card.append(info, button);
     host.append(card);
   });
 }
 
-async function loadPackages(organizationId) {
+async function loadPackages(organizationId, role = "operator") {
   selectedOrganization = organizationId;
   const host = $("packages");
   host.textContent = "Loading packages…";
@@ -93,6 +93,60 @@ async function loadPackages(organizationId) {
       detail.textContent = `TZS ${Number(item.price_tzs || 0).toLocaleString()} · ${hours}`;
       info.append(title, detail);
       card.append(info);
+
+      if (["owner", "admin"].includes(role)) {
+        const voucherPanel = document.createElement("div");
+        voucherPanel.className = "stack";
+        const quantity = document.createElement("input");
+        quantity.type = "number";
+        quantity.min = "1";
+        quantity.max = "500";
+        quantity.step = "1";
+        quantity.value = "10";
+        quantity.setAttribute("aria-label", "Number of vouchers to generate");
+        const generate = document.createElement("button");
+        generate.type = "button";
+        generate.className = "secondary";
+        generate.textContent = "Generate vouchers";
+        const message = document.createElement("small");
+        message.className = "muted";
+        const codes = document.createElement("textarea");
+        codes.readOnly = true;
+        codes.hidden = true;
+        codes.rows = 5;
+        codes.setAttribute("aria-label", "New voucher codes. Save them now; they cannot be retrieved again.");
+        generate.addEventListener("click", async () => {
+          const count = Number(quantity.value);
+          if (!Number.isInteger(count) || count < 1 || count > 500) {
+            message.textContent = "Enter a whole number from 1 to 500.";
+            return;
+          }
+          generate.disabled = true;
+          message.textContent = "Generating unique vouchers…";
+          codes.hidden = true;
+          try {
+            const result = await api("/api/vouchers/generate", {
+              method: "POST",
+              body: JSON.stringify({
+                organization_id: organizationId,
+                package_id: item.id,
+                quantity: count
+              })
+            });
+            const generated = Array.isArray(result.codes) ? result.codes : [];
+            if (generated.length !== count) throw new Error("The server did not return the expected number of vouchers.");
+            codes.value = generated.map((voucher) => voucher.code).join("\n");
+            codes.hidden = false;
+            message.textContent = `${generated.length} unique vouchers created. Copy or save these codes now; they will not be shown again.`;
+          } catch (error) {
+            message.textContent = error.message;
+          } finally {
+            generate.disabled = false;
+          }
+        });
+        voucherPanel.append(quantity, generate, message, codes);
+        card.append(voucherPanel);
+      }
       host.append(card);
     });
   } catch (error) {
