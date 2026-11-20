@@ -76,6 +76,7 @@ async function sendSupportMessage(event) {
     $("support-form").reset();
     $("support-feedback").textContent = "Message sent to the Super Admin. Thank you.";
     $("support-feedback").style.color = "#26734d";
+    await loadMySupportMessages();
   } catch (error) {
     $("support-feedback").textContent = error.message;
     $("support-feedback").style.color = "#a33b32";
@@ -104,6 +105,26 @@ async function loadSupportInbox(append = false) {
       const meta = document.createElement("p"); meta.className = "muted small";
       meta.textContent = `${m.sender_name || "User"} · ${m.sender_email || m.user_id} · ${org || "No business selected"} · ${m.category.replaceAll("_"," ")} · ${new Date(m.created_at).toLocaleString()}`;
       const body = document.createElement("p"); body.className = "support-message-body"; body.textContent = m.message;
+      const thread = document.createElement("div"); thread.className = "support-thread";
+      const threadTitle = document.createElement("strong"); threadTitle.textContent = "Conversation";
+      const threadList = document.createElement("div"); threadList.className = "support-replies stack";
+      const replyForm = document.createElement("form"); replyForm.className = "support-reply-form";
+      const replyInput = document.createElement("textarea"); replyInput.required = true; replyInput.maxLength = 4000; replyInput.rows = 2; replyInput.placeholder = "Write your reply to this user…";
+      const replyButton = document.createElement("button"); replyButton.type = "submit"; replyButton.className = "primary"; replyButton.textContent = "Send reply";
+      replyForm.append(replyInput, replyButton);
+      replyForm.addEventListener("submit", async (event) => {
+        event.preventDefault(); replyButton.disabled = true;
+        try {
+          await api("/api/support/replies", { method: "POST", body: JSON.stringify({ support_message_id: m.id, sender_role: "admin", message: replyInput.value.trim() }) });
+          replyInput.value = "";
+          await renderSupportReplies(m.id, threadList, "admin");
+          await api("/api/support/messages", { method: "PATCH", body: JSON.stringify({ id: m.id, status: "read" }) });
+          status.textContent = "READ"; status.className = "support-status status-read";
+        } catch (error) { window.alert(error.message); }
+        finally { replyButton.disabled = false; }
+      });
+      thread.append(threadTitle, threadList, replyForm);
+      renderSupportReplies(m.id, threadList, "admin");
       const controls = document.createElement("div"); controls.className = "support-actions";
       [["new","Mark new"],["read","Mark read"],["closed","Close message"]].forEach(([value,label]) => {
         const b = document.createElement("button"); b.type = "button"; b.className = "secondary"; b.textContent = label; b.disabled = m.status === value;
@@ -114,7 +135,7 @@ async function loadSupportInbox(append = false) {
         });
         controls.append(b);
       });
-      card.append(head, meta, body, controls); host.append(card);
+      card.append(head, meta, body, thread, controls); host.append(card);
     });
     supportInboxLoaded += messages.length;
     $("support-inbox-summary").textContent = `Loaded ${supportInboxLoaded} messages · This list is paginated; use “Load older messages” to continue through the inbox.`;
@@ -128,6 +149,63 @@ async function loadSupportInbox(append = false) {
 }
 $("support-refresh").addEventListener("click", () => loadSupportInbox(false));
 $("support-load-older").addEventListener("click", () => loadSupportInbox(true));
+
+async function renderSupportReplies(messageId, host, viewerRole) {
+  try {
+    const replies = await api(`/api/support/replies?message_id=${encodeURIComponent(messageId)}`);
+    host.replaceChildren();
+    if (!replies.length) {
+      const empty = document.createElement("p"); empty.className = "muted small"; empty.textContent = "No replies yet."; host.append(empty); return;
+    }
+    replies.forEach((reply) => {
+      const item = document.createElement("article"); item.className = "support-reply " + (reply.sender_role === "admin" ? "reply-admin" : "reply-user");
+      const label = document.createElement("strong"); label.textContent = reply.sender_role === "admin" ? "Super Admin" : "You / Customer";
+      const date = document.createElement("small"); date.textContent = new Date(reply.created_at).toLocaleString();
+      const content = document.createElement("p"); content.className = "support-message-body"; content.textContent = reply.message;
+      item.append(label, date, content); host.append(item);
+    });
+  } catch (error) {
+    host.textContent = "Could not load replies: " + error.message;
+  }
+}
+
+async function loadMySupportMessages() {
+  const host = $("support-own-list");
+  if (!host) return;
+  if (!session?.access_token) { host.textContent = "Sign in to view your support conversations and replies."; return; }
+  host.textContent = "Loading your conversations…";
+  try {
+    const messages = await api("/api/support/messages?offset=0");
+    host.replaceChildren();
+    if (!messages.length) { host.textContent = "You have not sent a support message yet."; return; }
+    messages.forEach((m) => {
+      const card = document.createElement("article"); card.className = "support-message-card";
+      const head = document.createElement("div"); head.className = "dashboard-head";
+      const subject = document.createElement("strong"); subject.textContent = m.subject;
+      const status = document.createElement("span"); status.className = "support-status status-" + m.status; status.textContent = m.status.toUpperCase();
+      head.append(subject, status);
+      const date = document.createElement("p"); date.className = "muted small"; date.textContent = "Sent " + new Date(m.created_at).toLocaleString();
+      const original = document.createElement("p"); original.className = "support-message-body"; original.textContent = m.message;
+      const replies = document.createElement("div"); replies.className = "support-replies stack";
+      const form = document.createElement("form"); form.className = "support-reply-form";
+      const input = document.createElement("textarea"); input.required = true; input.maxLength = 4000; input.rows = 2; input.placeholder = "Write a follow-up message…";
+      const send = document.createElement("button"); send.type = "submit"; send.className = "primary"; send.textContent = "Send follow-up";
+      form.append(input, send);
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault(); send.disabled = true;
+        try {
+          await api("/api/support/replies", { method: "POST", body: JSON.stringify({ support_message_id: m.id, sender_role: "user", message: input.value.trim() }) });
+          input.value = ""; await renderSupportReplies(m.id, replies, "user");
+        } catch (error) { window.alert(error.message); }
+        finally { send.disabled = false; }
+      });
+      card.append(head, date, original, replies, form); host.append(card);
+      renderSupportReplies(m.id, replies, "user");
+    });
+  } catch (error) { host.textContent = "Could not load your messages: " + error.message; }
+}
+$("support-own-refresh").addEventListener("click", loadMySupportMessages);
+
 
 async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
@@ -199,6 +277,7 @@ async function loadWorkspace() {
   $("onboarding-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
   if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformAccounts(), loadSupportInbox()]); }
+  await loadMySupportMessages();
   if (!memberships.length) {
     $("dashboard").classList.add("hidden");
     $("business-onboarding").classList.toggle("hidden", isPlatformAdmin);
