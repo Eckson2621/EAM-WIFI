@@ -177,6 +177,31 @@ async function handleApi(request, env) {
     const body = await insert.text();
     return new Response(body, { status: insert.status, headers: JSON_HEADERS });
   }
+  if (path === "/api/support/replies" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const messageId = String(input.support_message_id || "");
+    const message = String(input.message || "").trim();
+    const senderRole = String(input.sender_role || "");
+    if (!/^[0-9a-f-]{36}$/i.test(messageId)) return json({ error: "A valid support message ID is required." }, 400);
+    if (message.length < 1 || message.length > 4000) return json({ error: "Reply must be 1–4,000 characters." }, 400);
+    if (!["user","admin"].includes(senderRole)) return json({ error: "Invalid sender role." }, 400);
+    const authResponse = await supabaseFetch(env, "/auth/v1/user", { method: "GET" }, token);
+    if (!authResponse.ok) return json({ error: "Your session has expired. Sign in again." }, 401);
+    const authUser = await authResponse.json();
+    const insert = await supabaseFetch(env, "/rest/v1/support_replies?select=id,support_message_id,author_id,sender_role,message,created_at", {
+      method: "POST", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ support_message_id: messageId, author_id: authUser.id, sender_role: senderRole, message })
+    }, token);
+    return new Response(await insert.text(), { status: insert.status, headers: JSON_HEADERS });
+  }
+  if (path === "/api/support/replies" && request.method === "GET") {
+    const messageId = String(url.searchParams.get("message_id") || "");
+    if (!/^[0-9a-f-]{36}$/i.test(messageId)) return json({ error: "A valid support message ID is required." }, 400);
+    const query = new URLSearchParams({ select: "id,support_message_id,author_id,sender_role,message,created_at", support_message_id: `eq.${messageId}`, order: "created_at.asc", limit: "500" });
+    const upstream = await supabaseFetch(env, `/rest/v1/support_replies?${query}`, { method: "GET" }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
   if (path === "/api/support/messages" && request.method === "GET") {
     const requestedOffset = Number(url.searchParams.get("offset") || 0);
     const offset = Number.isInteger(requestedOffset) && requestedOffset >= 0 ? requestedOffset : 0;
