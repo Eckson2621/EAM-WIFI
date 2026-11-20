@@ -130,6 +130,21 @@ async function loadPlatformStats() {
     $("stat-sessions").textContent = number(stats.sessions_active);
     $("stat-month-revenue").textContent = "TZS " + number(stats.payments_month_tzs);
     $("stat-total-revenue").textContent = "TZS " + number(stats.payments_total_tzs);
+    const setBar = (id, value, max) => {
+      const node = $(id);
+      if (node) node.style.width = (max > 0 ? Math.max(0, Math.min(100, value / max * 100)) : 0) + "%";
+    };
+    $("chart-active-label").textContent = number(stats.businesses_active);
+    $("chart-pending-label").textContent = number(stats.businesses_pending);
+    $("chart-routers-label").textContent = number(stats.routers_online) + " / " + number(stats.routers_total);
+    $("chart-sessions-label").textContent = number(stats.sessions_active);
+    $("chart-customers-label").textContent = number(stats.customers_total);
+    setBar("chart-active-bar", Number(stats.businesses_active || 0), Number(stats.businesses_total || 0));
+    setBar("chart-pending-bar", Number(stats.businesses_pending || 0), Number(stats.businesses_total || 0));
+    setBar("chart-routers-bar", Number(stats.routers_online || 0), Number(stats.routers_total || 0));
+    const networkMax = Math.max(Number(stats.sessions_active || 0), Number(stats.customers_total || 0), 1);
+    setBar("chart-sessions-bar", Number(stats.sessions_active || 0), networkMax);
+    setBar("chart-customers-bar", Number(stats.customers_total || 0), networkMax);
   } catch (error) {
     ids.forEach((id) => { if ($(id)) $(id).textContent = "Unavailable"; });
     $("platform-admin-message").textContent = "Dashboard data could not load: " + error.message;
