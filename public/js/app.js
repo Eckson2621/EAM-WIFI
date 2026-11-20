@@ -26,6 +26,12 @@ function setMode(nextMode) {
   $("signup-tab").classList.toggle("active", mode === "signup");
   $("submit-auth").textContent = mode === "signin" ? "Sign in" : "Create account";
   $("password").autocomplete = mode === "signin" ? "current-password" : "new-password";
+  $("signup-details").classList.toggle("hidden", mode !== "signup");
+  ["signup-owner","signup-business","signup-phone","signup-country","signup-region","signup-district","signup-address"].forEach((id) => {
+    const field = $(id);
+    field.required = mode === "signup";
+    field.disabled = mode !== "signup";
+  });
   showMessage("");
 }
 
@@ -50,6 +56,17 @@ function setPlatformCallNotice(element, message) {
 async function loadWorkspace() {
   const user = await api("/api/auth/user");
   const memberships = await api("/api/organizations");
+  const profile = user.user_metadata || {};
+  const prefill = (name, value) => {
+    const field = $("business-form")?.elements.namedItem(name);
+    if (field && value && !field.value) field.value = value;
+  };
+  prefill("owner_name", profile.full_name);
+  prefill("business_name", profile.business_name);
+  prefill("contact_phone", profile.contact_phone);
+  prefill("country_code", profile.country_code || "TZ");
+  prefill("site_address", [profile.business_address, profile.district, profile.region].filter(Boolean).join(", "));
+  if (profile.business_name) prefill("site_name", profile.business_name + " Hotspot");
   $("auth-panel").classList.add("hidden");
   const isPlatformAdmin = (user.email || "").toLowerCase() === "mwalimueckson2104@gmail.com";
   $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
@@ -194,23 +211,33 @@ async function loadPlatformAccounts() {
         const option = document.createElement("option");
         option.value = value; option.textContent = label; method.append(option);
       });
+      const months = document.createElement("select");
+      months.setAttribute("aria-label", "Subscription duration in months");
+      [1,2,3,4,6,9,12,18,24,36,48,60].forEach((value) => {
+        const option = document.createElement("option");
+        option.value = String(value);
+        option.textContent = value === 1 ? "1 month" : value + " months";
+        months.append(option);
+      });
       const reference = document.createElement("input");
       reference.placeholder = "Payment reference (optional)";
       reference.maxLength = 120;
       const approve = document.createElement("button");
       approve.type = "button";
       approve.className = "secondary";
-      approve.textContent = "Confirm TSh 6,000 and approve 1 month";
+      approve.textContent = "Confirm payment and grant selected period";
       const message = document.createElement("small");
       message.className = "muted";
       approve.addEventListener("click", async () => {
-        if (!window.confirm(`Confirm that ${account.name} has paid TSh 6,000 for one month?`)) return;
+        const selectedMonths = Number(months.value);
+        const totalDue = 6000 * selectedMonths;
+        if (!window.confirm(`Confirm that ${account.name} has paid TSh ${totalDue.toLocaleString()} for ${selectedMonths} month(s)?`)) return;
         approve.disabled = true;
         message.textContent = "Approving subscription…";
         try {
           const result = await api("/api/platform/admin/approve", {
             method: "POST",
-            body: JSON.stringify({ organization_id: account.id, payment_method: method.value, payment_reference: reference.value.trim() || null })
+            body: JSON.stringify({ organization_id: account.id, payment_method: method.value, payment_reference: reference.value.trim() || null, months: selectedMonths })
           });
           message.textContent = `Approved. Access active until ${new Date(result.expires_at).toLocaleString()}.`;
           await loadPlatformAccounts();
@@ -219,7 +246,7 @@ async function loadPlatformAccounts() {
           approve.disabled = false;
         }
       });
-      controls.append(method, reference, approve, message);
+      controls.append(months, method, reference, approve, message);
       card.append(info, controls);
       host.append(card);
     });
@@ -398,7 +425,21 @@ $("auth-form").addEventListener("submit", async (event) => {
     const endpoint = mode === "signin" ? "/api/auth/signin" : "/api/auth/signup";
     const result = await api(endpoint, {
       method: "POST",
-      body: JSON.stringify({ email: $("email").value.trim(), password: $("password").value })
+      body: JSON.stringify(mode === "signin"
+        ? { email: $("email").value.trim(), password: $("password").value }
+        : {
+            email: $("email").value.trim(),
+            password: $("password").value,
+            data: {
+              full_name: $("signup-owner").value.trim(),
+              business_name: $("signup-business").value.trim(),
+              contact_phone: $("signup-phone").value.trim(),
+              country_code: $("signup-country").value.trim().toUpperCase(),
+              region: $("signup-region").value.trim(),
+              district: $("signup-district").value.trim(),
+              business_address: $("signup-address").value.trim()
+            }
+          })
     });
     if (!result.access_token) {
       setMode("signin");
