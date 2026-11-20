@@ -36,7 +36,7 @@ async function handleApi(request, env) {
   const path = url.pathname;
 
   if (request.method === "GET" && path === "/api/health") {
-    return json({ ok: true, app: "EAM-WIFI", database: "configured", timestamp: new Date().toISOString() });
+    return json({ ok: true, app: "EAM-WIFI", supabase_project: "configured", timestamp: new Date().toISOString() });
   }
 
   if (path === "/api/auth/signup" && request.method === "POST") {
@@ -45,7 +45,7 @@ async function handleApi(request, env) {
   if (path === "/api/auth/signin" && request.method === "POST") {
     return proxyAuth(request, env, "/auth/v1/token?grant_type=password");
   }
-  if (path === "/api/auth/user" && request.method === "GET") {
+  if (path === "/api/auth/logout" && request.method === "POST") {\n    const token = getToken(request);\n    if (!token) return json({ error: "Authentication required." }, 401);\n    const upstream = await supabaseFetch(env, "/auth/v1/logout", { method: "POST" }, token);\n    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });\n  }\n  if (path === "/api/auth/user" && request.method === "GET") {
     const token = getToken(request);
     if (!token) return json({ error: "Authentication required." }, 401);
     const upstream = await supabaseFetch(env, "/auth/v1/user", { method: "GET" }, token);
