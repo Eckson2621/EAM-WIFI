@@ -56,3 +56,18 @@ test("platform subscription admin endpoints require authentication", async () =>
   const response = await worker.fetch(new Request("https://example.test/api/platform/admin/accounts"), {});
   assert.equal(response.status, 401);
 });
+
+test("router heartbeat rejects missing device credentials", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/router/heartbeat", {
+    method: "POST"
+  }), {});
+  assert.equal(response.status, 401);
+});
+
+test("router pairing endpoint requires an authenticated business owner", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/router/pair", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ organization_id: "00000000-0000-0000-0000-000000000001" })
+  }), {});
+  assert.equal(response.status, 401);
+});
