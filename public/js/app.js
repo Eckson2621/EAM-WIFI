@@ -6,12 +6,18 @@ let selectedOrganization = null;
 $("year").textContent = new Date().getFullYear();
 
 const GUIDE_KEY = "eamwifi_guide_completed_v1";
+let helpReturnTarget = null;
 function finishGuide() {
   localStorage.setItem(GUIDE_KEY, "yes");
   $("welcome-guide").classList.add("hidden");
-  $("auth-panel").classList.remove("hidden");
   $("open-help").classList.remove("hidden");
-  $("auth-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (helpReturnTarget) {
+    $(helpReturnTarget).classList.remove("hidden");
+    helpReturnTarget = null;
+  } else {
+    $("auth-panel").classList.remove("hidden");
+    $("auth-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 $("guide-understood").addEventListener("change", (event) => {
   $("guide-confirm").disabled = !event.target.checked;
@@ -22,6 +28,7 @@ $("guide-confirm").addEventListener("click", () => {
 });
 $("guide-skip").addEventListener("click", finishGuide);
 $("open-help").addEventListener("click", () => {
+  helpReturnTarget = ["platform-admin", "dashboard", "business-onboarding"].find((id) => !$(`${id}`).classList.contains("hidden")) || null;
   $("welcome-guide").classList.remove("hidden");
   $("auth-panel").classList.add("hidden");
   $("business-onboarding").classList.add("hidden");
