@@ -86,6 +86,46 @@ async function handleApi(request, env) {
   const token = getToken(request);
   if (!token) return json({ error: "Authentication required." }, 401);
 
+  if (path === "/api/platform/admin/accounts" && request.method === "GET") {
+    const query = new URLSearchParams({
+      select: "id,name,slug,contact_phone,status,created_at,platform_subscriptions(status,expires_at)",
+      order: "created_at.asc"
+    });
+    const upstream = await supabaseFetch(env, `/rest/v1/organizations?${query}`, { method: "GET" }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
+  if (path === "/api/platform/admin/approve" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    if (!/^[0-9a-f-]{36}$/i.test(String(input.organization_id || ""))) {
+      return json({ error: "A valid organization_id is required." }, 400);
+    }
+    if (!["cash", "mobile_money", "bank_transfer", "other"].includes(input.payment_method)) {
+      return json({ error: "Select a valid payment method." }, 400);
+    }
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_approve_subscription", {
+      method: "POST",
+      body: JSON.stringify({
+        p_organization_id: input.organization_id,
+        p_payment_method: input.payment_method,
+        p_payment_reference: input.payment_reference || null
+      })
+    }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
+  if (path === "/api/platform/subscription" && request.method === "GET") {
+    const organizationId = url.searchParams.get("organization_id");
+    if (!organizationId || !/^[0-9a-f-]{36}$/i.test(organizationId)) {
+      return json({ error: "A valid organization_id is required." }, 400);
+    }
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_subscription_status", {
+      method: "POST", body: JSON.stringify({ p_organization_id: organizationId })
+    }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
   if (path === "/api/vouchers/issue-paid" && request.method === "POST") {
     let input;
     try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
