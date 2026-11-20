@@ -152,6 +152,46 @@ async function handleApi(request, env) {
     return json({ ok: true, device_token: deviceToken, expires_at: expiresAt, pairing });
   }
 
+
+  if (path === "/api/support/messages" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const subject = String(input.subject || "").trim();
+    const message = String(input.message || "").trim();
+    const category = String(input.category || "general");
+    const organizationId = input.organization_id ? String(input.organization_id) : null;
+    const allowedCategories = ["account","business_setup","router_connection","vouchers","payments","technical_issue","general"];
+    if (subject.length < 3 || subject.length > 140) return json({ error: "Subject must be 3–140 characters." }, 400);
+    if (message.length < 10 || message.length > 4000) return json({ error: "Message must be 10–4,000 characters." }, 400);
+    if (!allowedCategories.includes(category)) return json({ error: "Select a valid support category." }, 400);
+    if (organizationId && !/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "Invalid business reference." }, 400);
+    const authResponse = await supabaseFetch(env, "/auth/v1/user", { method: "GET" }, token);
+    if (!authResponse.ok) return json({ error: "Your session has expired. Sign in again." }, 401);
+    const authUser = await authResponse.json();
+    const senderName = String(authUser.user_metadata?.full_name || authUser.user_metadata?.name || "").slice(0,120);
+    const insert = await supabaseFetch(env, "/rest/v1/support_messages?select=id,created_at,status", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ user_id: authUser.id, sender_email: authUser.email || null, sender_name: senderName || null, organization_id: organizationId, category, subject, message })
+    }, token);
+    const body = await insert.text();
+    return new Response(body, { status: insert.status, headers: JSON_HEADERS });
+  }
+  if (path === "/api/support/messages" && request.method === "GET") {
+    const query = new URLSearchParams({ select: "id,user_id,sender_email,sender_name,organization_id,category,subject,message,status,created_at,updated_at,organization:organizations(name)", order: "created_at.desc", limit: "200" });
+    const upstream = await supabaseFetch(env, `/rest/v1/support_messages?${query}`, { method: "GET" }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+  if (path === "/api/support/messages" && request.method === "PATCH") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    if (!/^[0-9a-f-]{36}$/i.test(String(input.id || ""))) return json({ error: "A valid message ID is required." }, 400);
+    if (!["new","read","closed"].includes(input.status)) return json({ error: "Invalid message status." }, 400);
+    const query = new URLSearchParams({ id: `eq.${input.id}`, select: "id,status,updated_at" });
+    const upstream = await supabaseFetch(env, `/rest/v1/support_messages?${query}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ status: input.status, updated_at: new Date().toISOString() }) }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
   if (path === "/api/platform/admin/dashboard" && request.method === "GET") {
     const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_dashboard_stats", {
       method: "POST", body: "{}"
@@ -309,7 +349,7 @@ export default {
         return env.ASSETS ? env.ASSETS.fetch(new Request(portalUrl, request)) : new Response("Portal assets unavailable.", { status: 503 });
       }
       if (url.pathname.startsWith("/api/")) {
-        if (!["GET", "POST"].includes(request.method)) return json({ error: "Method not allowed." }, 405);
+        if (!["GET", "POST", "PATCH"].includes(request.method)) return json({ error: "Method not allowed." }, 405);
         return await handleApi(request, env);
       }
       if (env.ASSETS) return env.ASSETS.fetch(request);
