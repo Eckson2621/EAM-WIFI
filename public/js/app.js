@@ -5,6 +5,47 @@ let selectedOrganization = null;
 
 $("year").textContent = new Date().getFullYear();
 
+const GUIDE_KEY = "eamwifi_guide_completed_v1";
+function finishGuide() {
+  localStorage.setItem(GUIDE_KEY, "yes");
+  $("welcome-guide").classList.add("hidden");
+  $("auth-panel").classList.remove("hidden");
+  $("open-help").classList.remove("hidden");
+  $("auth-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("guide-understood").addEventListener("change", (event) => {
+  $("guide-confirm").disabled = !event.target.checked;
+});
+$("guide-confirm").addEventListener("click", () => {
+  if (!$("guide-understood").checked) return;
+  finishGuide();
+});
+$("guide-skip").addEventListener("click", finishGuide);
+$("open-help").addEventListener("click", () => {
+  $("welcome-guide").classList.remove("hidden");
+  $("auth-panel").classList.add("hidden");
+  $("business-onboarding").classList.add("hidden");
+  $("dashboard").classList.add("hidden");
+  $("platform-admin").classList.add("hidden");
+  $("welcome-guide").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("sim-heartbeat").addEventListener("click", () => {
+  $("sim-router-indicator").classList.add("online");
+  $("sim-router-status").textContent = "Simulator: heartbeat received (mock)";
+  $("sim-router-detail").textContent = "Local demonstration only · no physical router contacted";
+  $("sim-message").textContent = "Simulation passed: the practice screen changed state. This does NOT verify MikroTik connectivity, hotspot login or internet access.";
+  $("sim-message").style.color = "#8a5a00";
+});
+$("sim-reset").addEventListener("click", () => {
+  $("sim-router-indicator").classList.remove("online");
+  $("sim-router-status").textContent = "Router simulator: not connected";
+  $("sim-router-detail").textContent = "No real router connection has been tested.";
+  $("sim-message").textContent = "Simulation reset. No router was contacted.";
+  $("sim-message").style.color = "#66738b";
+});
+
+
+
 async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
   if (options.body) headers.set("content-type", "application/json");
@@ -510,12 +551,15 @@ $("platform-signout").addEventListener("click", signOut);
 (async function init() {
   // Always start in a clean signed-out state. A platform-admin panel must
   // never remain visible from a previous page/session render.
-  $("auth-panel").classList.remove("hidden");
+  const guideCompleted = localStorage.getItem(GUIDE_KEY) === "yes";
+  $("welcome-guide").classList.toggle("hidden", guideCompleted);
+  $("open-help").classList.toggle("hidden", !guideCompleted);
+  $("auth-panel").classList.toggle("hidden", !guideCompleted);
   $("business-onboarding").classList.add("hidden");
   $("dashboard").classList.add("hidden");
   $("platform-admin").classList.add("hidden");
   $("auth-message").textContent = "";
-  const savedSession = sessionStorage.getItem("eamwifi_session");
+  const savedSession = guideCompleted ? sessionStorage.getItem("eamwifi_session") : null;
   try {
     const health = await api("/api/health");
     $("connection").textContent = health.ok ? "Service online" : "Service unavailable";
@@ -532,6 +576,6 @@ $("platform-signout").addEventListener("click", signOut);
     $("platform-admin").classList.add("hidden");
     $("dashboard").classList.add("hidden");
     $("business-onboarding").classList.add("hidden");
-    $("auth-panel").classList.remove("hidden");
+    $("auth-panel").classList.toggle("hidden", localStorage.getItem(GUIDE_KEY) !== "yes");
   }
 })();
