@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b33">
+  <title>Wi-Fi Access | EAM-WIFI</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f2f5fa;color:#17233d;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+    header{background:#101b33;color:#fff;padding:20px max(20px,calc((100% - 620px)/2));font-weight:800;letter-spacing:.04em}
+    main{width:min(620px,calc(100% - 28px));margin:28px auto}.card{background:#fff;border:1px solid #e0e6ef;border-radius:16px;padding:22px;margin-bottom:16px;box-shadow:0 8px 28px #17233d0b}
+    h1{font-size:1.6rem;margin:0 0 8px}h2{font-size:1.1rem;margin:0 0 14px}.muted{color:#68758b;line-height:1.5}
+    .package{border:1px solid #e1e7f0;border-radius:10px;padding:13px;margin:9px 0}.package strong{display:block}.price{font-weight:800;color:#2149a5}
+    input{width:100%;padding:14px;border:1px solid #cbd5e3;border-radius:9px;font:inherit;margin:8px 0}
+    button{width:100%;padding:14px;border:0;border-radius:9px;background:#244db2;color:white;font-weight:800;font:inherit;cursor:pointer}
+    button:disabled{opacity:.6}.call{display:inline-block;margin-top:10px;padding:10px 14px;background:#eaf0ff;color:#2149a5;border-radius:8px;text-decoration:none;font-weight:700}
+    #message{min-height:24px;margin-top:12px;line-height:1.5}.error{color:#a33b32}.success{color:#26734d}footer{text-align:center;color:#8490a5;padding:18px;font-size:.8rem}
+  </style>
+  <script src="/js/portal.js" defer></script>
+</head>
+<body>
+  <header>EAM-WIFI</header>
+  <main>
+    <section class="card">
+      <h1 id="business-name">Wi-Fi access</h1>
+      <p class="muted">Choose a package, purchase a voucher from the business, then enter your voucher code below.</p>
+      <div id="business-contact" class="muted">Loading business contact…</div>
+    </section>
+    <section class="card">
+      <h2>Available packages</h2>
+      <div id="packages" class="muted">Loading packages…</div>
+    </section>
+    <section class="card">
+      <h2>Enter your voucher</h2>
+      <form id="redeem-form">
+        <label for="voucher">Voucher code</label>
+        <input id="voucher" name="voucher" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="EW..." minlength="18" maxlength="26" required>
+        <button id="redeem-button" type="submit">Verify voucher</button>
+      </form>
+      <p id="message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <footer>Powered by EAM-WIFI · EAM VENTURES</footer>
+</body>
+</html>
