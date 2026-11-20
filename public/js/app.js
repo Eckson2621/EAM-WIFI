@@ -83,18 +83,18 @@ async function sendSupportMessage(event) {
 }
 $("support-form").addEventListener("submit", sendSupportMessage);
 
-async function loadSupportInbox() {
+let supportInboxOffset = 0;
+let supportInboxLoaded = 0;
+async function loadSupportInbox(append = false) {
   const host = $("support-inbox");
   if (!host) return;
-  host.textContent = "Loading messages…";
+  if (!append) { supportInboxOffset = 0; supportInboxLoaded = 0; host.textContent = "Loading messages…"; }
   try {
-    const messages = await api("/api/support/messages");
-    host.replaceChildren();
+    const messages = await api(`/api/support/messages?offset=${supportInboxOffset}`);
+    if (!append) host.replaceChildren();
     const counts = { new: 0, read: 0, closed: 0 };
-    messages.forEach((m) => { counts[m.status] = (counts[m.status] || 0) + 1; });
-    $("support-inbox-summary").textContent = `New: ${counts.new} · Read: ${counts.read} · Closed: ${counts.closed} · Total shown: ${messages.length}`;
-    if (!messages.length) { host.textContent = "No support messages have been received yet."; return; }
     messages.forEach((m) => {
+      counts[m.status] = (counts[m.status] || 0) + 1;
       const card = document.createElement("article"); card.className = "support-message-card";
       const head = document.createElement("div"); head.className = "dashboard-head";
       const title = document.createElement("strong"); title.textContent = m.subject;
@@ -109,16 +109,25 @@ async function loadSupportInbox() {
         const b = document.createElement("button"); b.type = "button"; b.className = "secondary"; b.textContent = label; b.disabled = m.status === value;
         b.addEventListener("click", async () => {
           b.disabled = true;
-          try { await api("/api/support/messages", { method: "PATCH", body: JSON.stringify({ id: m.id, status: value }) }); await loadSupportInbox(); }
+          try { await api("/api/support/messages", { method: "PATCH", body: JSON.stringify({ id: m.id, status: value }) }); await loadSupportInbox(false); }
           catch (error) { b.disabled = false; window.alert(error.message); }
         });
         controls.append(b);
       });
       card.append(head, meta, body, controls); host.append(card);
     });
-  } catch (error) { host.textContent = "Could not load support inbox: " + error.message; $("support-inbox-summary").textContent = ""; }
+    supportInboxLoaded += messages.length;
+    $("support-inbox-summary").textContent = `Loaded ${supportInboxLoaded} messages · This list is paginated; use “Load older messages” to continue through the inbox.`;
+    supportInboxOffset += messages.length;
+    $("support-load-older").hidden = messages.length < 200;
+    if (!supportInboxLoaded) host.textContent = "No support messages have been received yet.";
+  } catch (error) {
+    host.textContent = "Could not load support inbox: " + error.message;
+    $("support-inbox-summary").textContent = "";
+  }
 }
-$("support-refresh").addEventListener("click", loadSupportInbox);
+$("support-refresh").addEventListener("click", () => loadSupportInbox(false));
+$("support-load-older").addEventListener("click", () => loadSupportInbox(true));
 
 async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
