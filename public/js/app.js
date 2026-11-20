@@ -381,6 +381,7 @@ async function signOut() {
 }
 $("signout").addEventListener("click", signOut);
 $("onboarding-signout").addEventListener("click", signOut);
+$("platform-signout").addEventListener("click", signOut);
 
 (async function init() {
   try {
