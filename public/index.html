@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b33">
   <title>EAM-WIFI | Hotspot Management</title>
   <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/app.js?v=20261120-9" defer></script>
+  <script src="/js/app.js?v=20261120-10" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -96,8 +96,8 @@
         <button id="platform-signout" class="secondary" type="button">Log out</button>
       </div>
       <div class="admin-own-business">
-        <div><strong>My Wi-Fi business</strong><p class="muted small">Register your own hotspot site and router as the Super Admin. It will be listed with other businesses in this dashboard.</p></div>
-        <button id="admin-register-business" class="primary" type="button">Register my Wi-Fi business</button>
+        <div><strong>My Wi-Fi business</strong><p class="muted small">Register and manage your own hotspot business separately from platform administration.</p></div>
+        <div class="admin-own-business-actions"><button id="admin-open-business" class="secondary hidden" type="button">Open My Business Dashboard</button><button id="admin-register-business" class="primary" type="button">Register my Wi-Fi business</button></div>
       </div>
       <span id="chart-routers-label" hidden></span>
       <section class="admin-visuals" aria-label="Platform analytics">
@@ -131,8 +131,8 @@
     </section>
     <section id="dashboard" class="panel hidden">
       <div class="dashboard-head">
-        <div><p class="eyebrow">ACCOUNT</p><h2 id="welcome">Your workspace</h2></div>
-        <button id="signout" class="secondary" type="button">Sign out</button>
+        <div><p class="eyebrow">MY WI-FI BUSINESS</p><h2 id="welcome">Your business dashboard</h2></div>
+        <div class="business-dashboard-actions"><button id="business-back-admin" class="secondary hidden" type="button">← Back to Super Admin</button><button id="signout" class="secondary" type="button">Sign out</button></div>
       </div>
       <div id="subscription-notice" class="form-note hidden"></div>\n      <h3>Your organizations</h3>
       <div id="organizations" class="stack"><p class="muted">Loading organizations…</p></div>
