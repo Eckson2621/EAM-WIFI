@@ -40,7 +40,7 @@ npm run dev
 4. Build/deploy command: `npm run deploy` (Cloudflare may also deploy from the connected GitHub repository when Git integration is configured).
 5. After deployment, open the assigned `workers.dev` URL and test `/api/health`.
 
-The GitHub repository is prepared for deployment, but a Cloudflare account connection and successful live deployment must still be completed and verified in Cloudflare.
+Automatic deployment is configured through GitHub Actions in `.github/workflows/deploy.yml`. Before it can deploy, open GitHub repository Settings → Secrets and variables → Actions → New repository secret and add:\n\n- `CLOUDFLARE_API_TOKEN`: a Cloudflare API token with permission to edit Workers.\n- `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID.\n\nThen push to `main` or run the workflow manually from the Actions tab. The workflow runs tests before deployment. Do not paste either value into source files or chat. A live deployment is not yet confirmed; it will only happen after those two GitHub secrets are configured and the workflow succeeds.
 
 ## Important limitations in this first scaffold
 
@@ -56,7 +56,7 @@ src/index.js             Cloudflare Worker API
 public/index.html        Browser application
 public/css/style.css     Application styles
 public/js/app.js         Browser authentication and workspace UI
-tests/worker.test.js     Basic Worker tests
+tests/worker.test.js     Basic Worker tests\n.github/workflows/deploy.yml  Test and deploy workflow
 wrangler.toml            Cloudflare Worker and static asset configuration
 package.json             Scripts and pinned Wrangler development dependency
 .dev.vars.example        Local environment variable template
