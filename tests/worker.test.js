@@ -17,8 +17,7 @@ test("protected endpoints reject requests without a bearer token", async () => {
 
 test("business registration endpoint rejects unauthenticated requests", async () => {
   const response = await worker.fetch(new Request("https://example.test/api/register-business", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
+    method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ business_name: "Test Wi-Fi" })
   }), {});
   assert.equal(response.status, 401);
@@ -26,9 +25,16 @@ test("business registration endpoint rejects unauthenticated requests", async ()
 
 test("voucher generation endpoint rejects unauthenticated requests", async () => {
   const response = await worker.fetch(new Request("https://example.test/api/vouchers/generate", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
+    method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ organization_id: "00000000-0000-0000-0000-000000000001", package_id: "00000000-0000-0000-0000-000000000002", quantity: 10 })
+  }), {});
+  assert.equal(response.status, 401);
+});
+
+test("paid voucher issuance endpoint rejects unauthenticated requests", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/vouchers/issue-paid", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ organization_id: "00000000-0000-0000-0000-000000000001", package_id: "00000000-0000-0000-0000-000000000002", amount_paid: 1000, payment_method: "cash" })
   }), {});
   assert.equal(response.status, 401);
 });
