@@ -6,3 +6,5 @@
 .voucher-issue input,.voucher-issue select{width:100%;min-width:0;padding:10px 11px;border:1px solid #cfd8e6;border-radius:8px;background:#fff;font:inherit}
 .voucher-issue button{white-space:normal}
 .voucher-code{font-weight:800;letter-spacing:.08em;font-size:1.05rem;background:#f2f6ff!important;border-color:#b8c9ff!important}
+
+.portal-link{display:inline-block;margin-top:8px;color:#244db2;font-weight:700;text-decoration:none}.portal-link:hover{text-decoration:underline}
