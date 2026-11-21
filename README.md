@@ -1,6 +1,6 @@
 # EAM-WIFI
 
-EAM-WIFI is a multi-tenant Wi-Fi hotspot management application by EAM VENTURES. It uses Cloudflare Workers for the application API and static interface, and the existing Supabase project for authentication and data.
+EAM-WIFI is a multi-tenant Wi-Fi hotspot management application by EAM VENTURES. It uses Cloudflare Workers for the application API and static interface, and Supabase for authentication and data.
 
 ## Current foundation
 
@@ -9,7 +9,10 @@ EAM-WIFI is a multi-tenant Wi-Fi hotspot management application by EAM VENTURES.
 - Hotspot site registration, including branch name and physical address.
 - Router metadata registration: brand, model, integration mode, optional LAN address and API port.
 - A transaction-safe Supabase RPC creates the organization, owner membership, user profile, hotspot site, router record and organization settings together.
-- Organization membership and Wi-Fi package lookup, scoped by the authenticated user's RLS permissions.\n- Every owner/admin creates and edits their own packages (price, connected-time or wall-clock duration, validity, data cap, speed, max devices). Manual paid voucher issuance requires the exact package amount, records payment method and optional customer phone/reference, and issues one fresh globally unique one-time voucher code.\n- Platform subscription: each Wi-Fi business pays TSh 6,000 per month; registration remains pending until the platform administrator manually confirms payment and approves one month. Package access and voucher issuance are blocked when the subscription is pending or expired.\n- Customer portal: `/portal?site=<business-slug>` displays that business's contact number, payment number, instructions and active packages. The owner manually verifies payment to their own number, records it, and issues one voucher. Voucher redemption atomically consumes the voucher, returns one-time hotspot login credentials and queues a router event.
+- Organization membership and Wi-Fi package lookup, scoped by the authenticated user's RLS permissions.
+- Every owner/admin creates and edits their own packages (price, connected-time or wall-clock duration, validity, data cap, speed, max devices). Manual paid voucher issuance requires the exact package amount, records payment method and optional customer phone/reference, and issues one fresh globally unique one-time voucher code.
+- Platform subscription: each Wi-Fi business pays TSh 6,000 per month; registration remains pending until the platform administrator manually confirms payment and approves one month. Package access and voucher issuance are blocked when the subscription is pending or expired.
+- Customer portal: `/portal?site=<business-slug>` displays that business's contact number, payment number, instructions and active packages. The owner manually verifies payment to their own number, records it, and issues one voucher. Voucher redemption atomically consumes the voucher, returns one-time hotspot login credentials and queues a router event.
 - The Worker forwards the signed-in user's JWT and does not use a service-role key.
 - Private chat attachment bucket (`chat-attachments`) is provisioned as private, with participant-scoped Storage policies and a 15 MB file limit; the browser upload UI is not yet connected.
 - Chat tables are enabled in the `supabase_realtime` publication with RLS, but the current chat screen still refreshes by polling; a Realtime client subscription is not yet wired.
@@ -33,21 +36,23 @@ npm run dev
 
 ## Deploy to Cloudflare Workers
 
-1. Open Cloudflare Dashboard → Workers & Pages → Create application → Import a repository.
-2. Connect GitHub and select `Eckson2621/EAM-WIFI`, branch `main`.
-3. Configure the Worker using the repository's `wrangler.toml`.
-4. For automated deployment, add these GitHub repository Actions secrets:
-   - `WIFI_BUILD_TOKEN`: a Cloudflare API token with permission to edit Workers Scripts in the target account.
-   - `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID.
-5. Push to `main` or manually run the workflow from the Actions tab. It runs tests before deployment.
+The GitHub Actions workflow deploys the existing Worker named `wifi` using `wrangler.toml`.
 
-Never paste Cloudflare tokens, Supabase service-role keys, router passwords or payment secrets into source files, GitHub commits, browser code or chat. A live deployment is not confirmed until the workflow succeeds.
+1. In Cloudflare Dashboard, open **Manage Account → API Tokens** and create an account-owned API token.
+2. Give it **Workers → Editor** permission scoped to the existing Worker named `wifi`, or to the Workers product if that resource scope is unavailable. If `wifi` does not yet exist in the selected account, creating it requires Workers product-level **Admin**.
+3. Make sure the token belongs to the Cloudflare account whose ID is `03295d1fe8b8e4fef8ce9c2cb32a2534`.
+4. In GitHub, open **Settings → Secrets and variables → Actions** for this repository and replace the value of `WIFI_BUILD_TOKEN` with the new token. Do not paste the token into chat, source files, commits, screenshots or support messages.
+5. Push to `main` or manually run the workflow from the Actions tab. It runs `npm test` before deployment.
+
+The workflow already contains the account ID; a separate `CLOUDFLARE_ACCOUNT_ID` GitHub secret is not used. A token merely existing in GitHub is not proof that it has the correct account or permissions. A live deployment is not confirmed until the workflow succeeds.
 
 ## Router connection status
 
-Registration creates the router record but does **not** connect to the physical router. The database and Worker now support one-time owner pairing, renewable router credentials, outbound heartbeat, authenticated event polling/acknowledgement, retries, and queued session-expiry events. An owner dashboard button generates a one-time credential and a personalized RouterOS 7 installer with the token stored in the router script so it survives reboot. The script creates/removes MikroTik Hotspot users, applies uptime/data/speed/shared-device limits, and acknowledges events. This is a connector template and has not yet been validated on a physical router; test exact model/RouterOS release before production. The customer portal and database voucher validation queue exist, but a redeemed voucher does not provide internet until the paired MikroTik connector activates its queued session. Manual payment confirmation and one-code issuance are implemented as the owner-side workflow; no online payment provider is connected.
+Registration creates the router record but does **not** connect to the physical router. The database and Worker support one-time owner pairing, renewable router credentials, outbound heartbeat, authenticated event polling/acknowledgement, retries, and queued session-expiry events. An owner dashboard button generates a one-time credential and a personalized RouterOS 7 installer with the token stored in the router script so it survives reboot. The script creates/removes MikroTik Hotspot users, applies uptime/data/speed/shared-device limits, and acknowledges events.
 
-A private router address such as `192.168.88.1` cannot be reached directly from a public Cloudflare Worker. Do not expose an unrestricted router API port to the internet. MikroTik initiates outbound HTTPS; no inbound router API port is required. See `docs/router-connection.md`, `docs/customer-portal.md` and the selected equipment plan in `docs/hardware-deployment.md`.
+This is a connector template and has not yet been validated on a physical router; test the exact model and RouterOS release before production. The customer portal and database voucher validation queue exist, but a redeemed voucher does not provide internet until the paired MikroTik connector activates its queued session. Manual payment confirmation and one-code issuance are implemented as the owner-side workflow; no online payment provider is connected.
+
+A private router address such as `192.168.88.1` cannot be reached directly from a public Cloudflare Worker. Do not expose an unrestricted router API port to the internet. MikroTik initiates outbound HTTPS; no inbound router API port is required. See `docs/router-connection.md`, `docs/customer-portal.md` and `docs/hardware-deployment.md`.
 
 ## Security status
 
@@ -55,9 +60,11 @@ A private router address such as `192.168.88.1` cannot be reached directly from 
 - Only authenticated users can execute it; anonymous execution is revoked.
 - The registration operation is atomic: if any record insert fails, the transaction rolls back.
 - The router password/API secret is deliberately not collected or stored by the registration form.
-- RLS is enabled on all 24 public application tables and both private credential/admin tables. Direct anonymous table privileges are revoked; public captive-portal and router-auth RPCs are the only intentional anonymous database entry points.
-- Admin-only SECURITY DEFINER RPCs enforce the authenticated Super Admin identity in their function bodies. The private schema has no client table policies, so direct reads are denied; trusted definer functions perform the required internal lookups.
-- Security Advisor currently reports leaked-password protection disabled in Supabase Auth. Enable it in Authentication → Settings → Password Security before production.
+- RLS is enabled on all 24 public application tables. Direct anonymous table privileges are revoked; public captive-portal and router-auth RPCs are intentional anonymous entry points.
+- Admin-only `SECURITY DEFINER` RPCs enforce the authenticated Super Admin identity in their function bodies. The private schema has no client table policies, so direct reads are denied; trusted definer functions perform the required internal lookups.
+- Security Advisor currently reports leaked-password protection disabled in Supabase Auth. Enable it in **Authentication → Settings → Password Security** before production: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- The latest security audit found all 24 public tables have RLS enabled and no public table missing RLS. It also found overlapping SELECT policies on `network_devices`; this is a low-priority policy-efficiency cleanup, not evidence of an access-control bypass.
+- The automated test suite currently focuses mainly on unauthenticated-request rejection and malformed public input. It is not a substitute for authenticated cross-organization authorization tests.
 - Real authenticated cross-organization tests, browser-based chat attachment/realtime tests, and router pairing tests are still required before production use.
 
 ## Repository layout
@@ -66,16 +73,30 @@ A private router address such as `192.168.88.1` cannot be reached directly from 
 src/index.js                         Cloudflare Worker API
 public/index.html                    Browser application and onboarding form
 public/css/style.css                 Application styles
-public/js/app.js                     Authentication, subscriptions and admin approval\npublic/portal.html                   Customer captive portal\npublic/js/portal.js                  Public package list and voucher submission
-database/register_wifi_business.sql  Atomic Supabase registration RPC\ndatabase/supabase_completion_patch.sql  Database defaults, status and router heartbeat fixes\ndatabase/router_event_queue_rpc.sql  Secure router event claim/retry/acknowledgement RPCs\ndatabase/customer_payment_router_runtime.sql  Customer payment settings and router voucher/session runtime\ndatabase/business_registration_payment_details.sql  Atomic registration with separate customer payment number\ndatabase/platform_admin_system_health.sql  Super Admin system health diagnostics\ndatabase/router_heartbeat_freshness_guard.sql  Require fresh router heartbeat before voucher redemption\ndatabase/network_device_member_status_read.sql  Let each business member inspect its own router status\npublic/downloads/eam-wifi-agent-template.rsc  Unconfigured template personalized at router pairing\ndatabase/global_unique_voucher_generation.sql  Global unique voucher generator\ndatabase/protect_redeemed_voucher_history.sql  Voucher history protection\ndatabase/manual_paid_voucher_issue.sql  Manual paid-voucher issuance and sales ledger\ndatabase/platform_monthly_subscription_approval.sql  TSh 6,000 monthly business subscription\ndatabase/public_wifi_portal_and_atomic_voucher_redemption.sql  Public portal and atomic redemption queue
-docs/router-connection.md            Secure router pairing plan
-tests/worker.test.js                 Basic Worker tests
+public/js/app.js                     Authentication, subscriptions and admin approval
+public/portal.html                   Customer captive portal
+public/js/portal.js                  Public package list and voucher submission
+database/register_wifi_business.sql  Atomic Supabase registration RPC
+database/supabase_completion_patch.sql  Database defaults, status and router heartbeat fixes
+database/router_event_queue_rpc.sql  Secure router event claim/retry/acknowledgement RPCs
+database/customer_payment_router_runtime.sql  Customer payment settings and router voucher/session runtime
+database/business_registration_payment_details.sql  Atomic registration with separate customer payment number
+database/platform_admin_system_health.sql  Super Admin system health diagnostics
+database/router_heartbeat_freshness_guard.sql  Require fresh heartbeat before voucher redemption
+database/network_device_member_status_read.sql  Let each business member inspect its router status
+public/downloads/eam-wifi-agent-template.rsc  Unconfigured template personalized at router pairing
+database/global_unique_voucher_generation.sql  Global unique voucher generator
+database/protect_redeemed_voucher_history.sql  Voucher history protection
+database/manual_paid_voucher_issue.sql  Manual paid-voucher issuance and sales ledger
+database/platform_monthly_subscription_approval.sql  TSh 6,000 monthly business subscription
+database/public_wifi_portal_and_atomic_voucher_redemption.sql  Public portal and atomic redemption
+docs/router-connection.md            Secure router pairing and operational checklist
+tests/worker.test.js                 Basic Worker request-validation tests
 .github/workflows/deploy.yml         Test and deploy workflow
 wrangler.toml                        Cloudflare Worker configuration
 package.json                         Scripts and Wrangler dependency
 .dev.vars.example                    Local environment template
 ```
-
 
 ## Business payment, customer access and communication
 
@@ -84,7 +105,6 @@ package.json                         Scripts and Wrangler dependency
 - Customers pay the business directly. The owner must verify receipt, select the package, record amount/method/reference, and issue the voucher. Automatic confirmation from M-Pesa/Airtel Money/Tigo Pesa is not configured.
 - Registered owners communicate with Super Admin through Help → Support messages. Messages are delivered to the Super Admin inbox, replies return to the owner, and owners can follow up. Platform subscription contact is 0613794448; it is not the business owner's customer payment number.
 - Router pairing and customer voucher flow are implemented in code, but physical RouterOS, hotspot redirect, walled-garden, time/data exhaustion and reboot/outage tests remain required before production.
-
 
 ## Super Admin operational checks
 
