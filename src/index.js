@@ -168,6 +168,18 @@ async function handleApi(request, env) {
   const token = getToken(request);
   if (!token) return json({ error: "Authentication required." }, 401);
 
+  if (path === "/api/routers" && request.method === "GET") {
+    const organizationId = String(url.searchParams.get("organization_id") || "");
+    if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "A valid organization_id is required." }, 400);
+    const query = new URLSearchParams({
+      select: "id,name,vendor,model,connection_status,last_seen_at,created_at",
+      organization_id: `eq.${organizationId}`,
+      order: "created_at.desc"
+    });
+    const upstream = await supabaseFetch(env, `/rest/v1/network_devices?${query}`, { method: "GET" }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
   if (path === "/api/business/settings" && ["GET", "PATCH"].includes(request.method)) {
     const input = request.method === "PATCH" ? await request.json().catch(() => null) : null;
     if (request.method === "PATCH" && !input) return json({ error: "Invalid JSON body." }, 400);
