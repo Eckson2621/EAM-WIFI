@@ -70,3 +70,16 @@ The connector is a RouterOS script template, not a claim that every RouterOS ver
 6. Test duplicate redemption, wrong code, wrong business, disabled package, expired voucher and offline router; all must be rejected.
 7. Test connected-time exhaustion, data-cap exhaustion and wall-clock expiry. Confirm the active user is disconnected/removed and the database session reaches expected status.
 8. Repeat after router reboot and temporary internet outage. Do not declare production-ready until these tests pass.
+
+
+## Before pairing
+
+- RouterOS 7.13 or later is required for this connector template.
+- The router must already have a working WAN/ISP internet connection, DNS, DHCP and a HotSpot server on the customer-facing bridge/interface. The connector does not configure the ISP uplink, Wi-Fi radio, DHCP pool, NAT or create the HotSpot server.
+- The router must be able to make outbound HTTPS connections to wifi.eckson.workers.dev on TCP 443. Do not expose RouterOS API, Winbox, SSH or WebFig to the public internet.
+- Add the EAM-WIFI hostname to the HotSpot walled garden so unauthenticated clients can reach the HTTPS portal.
+- Configure the HotSpot login profile to use http-pap for the external login form, or HTTPS login with a valid certificate. CHAP-only login does not accept the external portal's plain username/password form.
+- The HotSpot login.html must redirect with the business slug, client MAC, link-login-only and link-orig values. Use the URLSearchParams snippet shown by the owner dashboard so the router URL is encoded safely.
+- MikroTik rate-limit creates simple queues. RouterOS documentation warns that FastTracked traffic can bypass simple queue limits; exclude HotSpot client traffic from FastTrack or disable FastTrack for that traffic, then test the actual speed.
+
+The connector applies voucher-created HotSpot users. It does not provision arbitrary router models or replace a router's initial internet/HotSpot configuration.
