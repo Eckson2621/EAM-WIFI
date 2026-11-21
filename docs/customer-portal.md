@@ -1,40 +1,45 @@
-# EAM-WIFI customer portal
+# EAM-WIFI customer Wi-Fi portal
 
-Each business has a public portal URL:
+Each business has its own public captive portal:
+https://wifi.eckson.workers.dev/portal?site=<organization-slug>
 
-`https://<your-worker-domain>/portal?site=<organization-slug>`
+Owners can edit the business contact number, mobile-money payment number and payment instructions. These are shown to customers.
 
-The owner dashboard includes an **Open customer Wi-Fi portal** link. The portal reads only public business details: business name, business contact number and active packages.
+## Customer purchase and access flow
 
-## Captive portal behavior
+1. Customer connects to the business Wi-Fi network; MikroTik Hotspot redirects the phone to the business portal.
+2. Portal displays the business packages, prices, duration, limits, contact phone and payment number.
+3. Customer pays the exact package price directly to the business using the displayed mobile-money number or another payment method accepted by the owner.
+4. Owner verifies the money arrived, records payment method/reference in EAM-WIFI, then issues one unique voucher from the package card.
+5. Owner gives the voucher to the customer.
+6. Customer enters the voucher on the same captive portal. Database checks business subscription, active router, package and unused voucher; it consumes the voucher once and queues a router event.
+7. Portal receives one-time Hotspot username/password and submits them to the router's local link-login-only endpoint.
+8. Router applies package limits. Connected-time uses RouterOS limit-uptime; data caps use limit-bytes-total; speed and shared-device limits use a dedicated Hotspot profile. Wall-clock expiry is queued by the database and the connector removes the Hotspot user when that event is polled.
 
-1. A customer selects the business Wi-Fi network on their phone.
-2. MikroTik Hotspot automatically redirects the phone to the EAM-WIFI captive portal; Android/iPhone should show the built-in "Sign in to Wi-Fi network" prompt. The customer must not search Google or manually type a website address.
-3. The portal displays the business phone number and packages.
-3. The customer calls the business and purchases a voucher.
-4. The owner issues one voucher from the authenticated dashboard after manually confirming payment.
-5. The customer enters the voucher code on the portal.
-6. The database checks the voucher once, marks it redeemed and queues an access session/router event.
+Payment automation note: Customers pay the business, not EAM-WIFI. EAM-WIFI is not currently connected to M-Pesa, Airtel Money, Tigo Pesa or bank payment APIs. The owner manually verifies incoming money before issuing a voucher. Do not claim automatic mobile-money confirmation until a provider and authorized API credentials are configured.
 
-The customer-facing flow is intended to happen inside the Wi-Fi sign-in screen, not through Google search. Phones commonly display a system captive-portal pop-up/webview to render the login page; this is part of joining Wi-Fi, not asking the customer to browse Google.
+## Captive portal configuration
 
-For a MikroTik Hotspot, the final captive-portal redirect must pass the organization slug and the client MAC address to the portal. The business owner must configure the router's Hotspot login page and walled-garden access so the phone can reach the portal before authentication. The intended URL shape is:
+The MikroTik Hotspot login page must redirect to EAM-WIFI and preserve the router login URL, original destination and client MAC. Intended redirect URL:
 
-`https://<your-worker-domain>/portal?site=<organization-slug>&mac=$(mac)`
+https://wifi.eckson.workers.dev/portal?site=<organization-slug>&mac=$(mac)&link-login-only=$(link-login-only)&link-orig=$(link-orig)
 
-This is a template reference, not a completed MikroTik configuration. Confirm the exact Hotspot login-page behavior against the router's RouterOS version before replacing the production login page.
+The hosted portal auto-posts credentials only to a private IPv4 router address (10/8, 172.16/12 or 192.168/16). This prevents a modified portal URL from sending generated hotspot credentials to an arbitrary external host.
 
-## Router activation status
+Add the EAM-WIFI host to the Hotspot walled garden so unauthenticated clients can load the portal and its assets. Verify the actual RouterOS version's login-page variables before replacing the default login page.
 
-The database refuses to consume a voucher unless the organization has an active platform subscription and a MikroTik device marked `connection_status = 'connected'`. Redemption then queues a session and a `voucher_redemption_requested` router event.
+## Voucher and timer enforcement
 
-The secure MikroTik pairing agent that authenticates to EAM-WIFI, receives this event, creates/enables the Hotspot user and reports session activation is not yet implemented. Therefore the portal and one-time voucher validation queue are built, but internet access is not yet granted by a live router. Do not advertise the portal as fully operational until pairing and live RouterOS tests pass.
+- Voucher codes are globally unique, one-time-use, and stored as hashes; plaintext codes are shown only at issuance.
+- A voucher cannot be redeemed without an active business subscription and an online paired MikroTik router.
+- Database creates one access session and router event for successful redemption.
+- RouterOS connector polls the event queue over outbound HTTPS every 15 seconds and acknowledges success/failure.
+- Connected-time is enforced by RouterOS limit-uptime; data caps by limit-bytes-total; profile speed and shared-user limits are applied per session.
+- Wall-clock/validity expiry is queued by the database and the router removes the active user on its next successful poll (normally within one polling interval while connected).
+- If the router loses internet connectivity, cloud-side expiry events cannot reach it until it reconnects. RouterOS connected-time and data limits remain local; wall-clock expiry removal is delayed until connectivity returns. Do not advertise offline wall-clock enforcement as instantaneous.
 
-## Platform subscription
+## Platform subscription and support
 
-Every Wi-Fi business pays TSh 6,000 for one month. Registration remains pending until the platform administrator manually confirms payment. The subscription approval screen records the payment method/reference and activates access for one month. Expired subscriptions cannot load packages or issue vouchers.
+Every Wi-Fi business pays EAM-WIFI TSh 6,000 per month. New registrations remain pending until Super Admin confirms payment and activates the subscription. Platform billing contact: 0613794448. This is separate from each business's own customer payment number.
 
-
-## EAM-WIFI platform contact
-
-Business owners who register and need to pay the platform subscription should call **0613794448**. The app displays this number with a tap-to-call link when the business is waiting for approval or renewal. This is the EAM-WIFI platform billing contact, not the phone number each Wi-Fi business displays to its own customers.
+Registered owners can send support messages and reply to Super Admin from the in-app Help/Support section. Super Admin can view the support inbox and reply in the platform dashboard.
