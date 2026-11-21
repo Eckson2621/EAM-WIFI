@@ -45,7 +45,7 @@ Never paste Cloudflare tokens, Supabase service-role keys, router passwords or p
 
 ## Router connection status
 
-Registration creates the router record but does **not** connect to the physical router. Router secure pairing, live RouterOS control, heartbeat/status updates, and processing the queued voucher redemption event to create/enable the MikroTik Hotspot user are still to be built and tested. The customer portal and database voucher validation queue exist, but a redeemed voucher does not provide internet until the paired MikroTik connector activates its queued session. Manual payment confirmation and one-code issuance are implemented as the owner-side workflow; no online payment provider is connected.
+Registration creates the router record but does **not** connect to the physical router. The database now supports short-lived pairing followed by a renewable device credential and online heartbeat status. The router-side connector, live RouterOS control, event polling/acknowledgement and applying the voucher event to create/enable the MikroTik Hotspot user are still to be built and tested. The customer portal and database voucher validation queue exist, but a redeemed voucher does not provide internet until the paired MikroTik connector activates its queued session. Manual payment confirmation and one-code issuance are implemented as the owner-side workflow; no online payment provider is connected.
 
 A private router address such as `192.168.88.1` cannot be reached directly from a public Cloudflare Worker. Do not expose an unrestricted router API port to the internet. The next integration step is a short-lived pairing flow and a router-side connector that initiates outbound HTTPS. See `docs/router-connection.md`, `docs/customer-portal.md` and the selected equipment plan in `docs/hardware-deployment.md`.
 
@@ -57,7 +57,7 @@ A private router address such as `192.168.88.1` cannot be reached directly from 
 - The router password/API secret is deliberately not collected or stored by the registration form.
 - RLS is enabled on all 24 public application tables and both private credential/admin tables. Direct anonymous table privileges are revoked; public captive-portal and router-auth RPCs are the only intentional anonymous database entry points.
 - Admin-only SECURITY DEFINER RPCs enforce the authenticated Super Admin identity in their function bodies. The private schema has no client table policies, so direct reads are denied; trusted definer functions perform the required internal lookups.
-- Security Advisor may still report informational private-table RLS-without-policy notices (intentional deny-by-default), the two authenticated Super Admin SECURITY DEFINER RPCs (they enforce the Super Admin check), and leaked-password protection disabled in Auth. Enable leaked-password protection in the Supabase Auth password-security settings before production.
+- Security Advisor currently reports leaked-password protection disabled in Supabase Auth. Enable it in Authentication → Settings → Password Security before production.
 - Real authenticated cross-organization tests, browser-based chat attachment/realtime tests, and router pairing tests are still required before production use.
 
 ## Repository layout
