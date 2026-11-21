@@ -41,14 +41,14 @@ The registration RPC creates the organization, owner membership, hotspot site, r
 - Router-initiated HTTPS heartbeat at `POST /api/router/heartbeat`; updates the registered MikroTik device's connected status and last-seen timestamp.
 - RouterOS v7 heartbeat starter: `mikrotik/eam-wifi-heartbeat.rsc`.
 
-This identity/heartbeat foundation is now extended by authenticated event polling and acknowledgement. The RouterOS connector template is stored in public/downloads/eam-wifi-agent.rsc; physical router behavior still requires device testing.
+This identity/heartbeat foundation is now extended by authenticated event polling and acknowledgement. The RouterOS connector template is stored in public/downloads/eam-wifi-agent-template.rsc; the Worker personalizes it with a one-time token for each owner pairing. Physical router behavior still requires device testing.
 
 
 ## Owner dashboard pairing and RouterOS connector
 
-After the business subscription is active, the owner opens the business dashboard and selects Connect MikroTik router. EAM-WIFI creates a one-time 256-bit token with a 10-minute initial pairing window. The token is displayed once. Copy the commands shown by the dashboard and paste them into the MikroTik Terminal. The commands download and import the public connector script at /downloads/eam-wifi-agent.rsc.
+After the business subscription is active, the owner opens the business dashboard and selects Connect MikroTik router. EAM-WIFI creates a one-time 256-bit token with a 10-minute initial pairing window and returns a personalized installer containing that token inside the saved RouterOS script. Download the configured installer from the dashboard, upload it through Winbox/WebFig Files, then import it.
 
-The import command is `/import file-name=eam-wifi-agent.rsc`. The saved script contains the router credential so it survives reboot. The script is designed for RouterOS 7.13+ and:
+The import command is `/import file-name=eam-wifi-agent.rsc`. The public template file is not executable by itself; use the personalized file downloaded after pairing. The saved script contains the router credential so it survives reboot. The script is designed for RouterOS 7.13+ and:
 - sends outbound HTTPS heartbeat to https://wifi.eckson.workers.dev/api/router/heartbeat;
 - polls /api/router/events every 15 seconds;
 - creates the Hotspot user/profile for voucher-redemption events;
