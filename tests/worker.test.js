@@ -71,3 +71,9 @@ test("router pairing endpoint requires an authenticated business owner", async (
   }), {});
   assert.equal(response.status, 401);
 });
+
+test("router event queue rejects missing device credentials", async () => { const response = await worker.fetch(new Request("https://example.test/api/router/events", { method: "POST" }), {}); assert.equal(response.status, 401); });
+
+test("router event acknowledgement rejects malformed unauthenticated requests", async () => { const response = await worker.fetch(new Request("https://example.test/api/router/events/complete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ event_id: "bad", success: true }) }), {}); assert.equal(response.status, 401); });
+
+test("business payment settings endpoint requires authentication", async () => { const response = await worker.fetch(new Request("https://example.test/api/business/settings?organization_id=00000000-0000-0000-0000-000000000001"), {}); assert.equal(response.status, 401); });
