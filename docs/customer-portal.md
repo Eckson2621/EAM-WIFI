@@ -41,7 +41,7 @@ Allow the EAM-WIFI hostname before login. On the MikroTik, add it to the Hotspot
 /ip hotspot walled-garden add dst-host=wifi.eckson.workers.dev action=allow
 ```
 
-Confirm the actual RouterOS version's login-page variables and test the redirect from a phone before replacing the production login page.
+For the Hotspot server profile, enable the http-pap login method for this external username/password form, or configure HTTPS login with a valid router certificate. The portal submits the generated username/password to the router's local login endpoint; a CHAP-only profile will not accept the plain form credentials. Confirm the actual RouterOS version's login-page variables and test the redirect from a phone before replacing the production login page.
 
 ## Voucher and timer enforcement
 
