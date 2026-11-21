@@ -7,5 +7,5 @@ directory = "./public"
 binding = "ASSETS"
 
 [vars]
-SUPABASE_URL = "https://jrgmzajlmuqpslhhroez.supabase.co"
-SUPABASE_PUBLISHABLE_KEY = "sb_publishable_suaOvY96CeWAyi8c0vACFg_yU5MKewH"
+SUPABASE_URL = "https://jvzjzmfnxytryzpylrqj.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Ajn7XOxAkv00DmrXOG-YDA__-b2FVt8"
