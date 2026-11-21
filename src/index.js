@@ -217,7 +217,7 @@ async function handleApi(request, env) {
     const installerTemplate = await installerResponse.text();
     if (!installerTemplate.includes("__EAM_WIFI_TOKEN__")) return json({ error: "Router installer template is invalid." }, 500);
     const installerScript = installerTemplate.replaceAll("__EAM_WIFI_TOKEN__", deviceToken);
-    return json({ ok: true, device_token: deviceToken, expires_at: expiresAt, pairing, installer_script: installerScript });
+    return json({ ok: true, expires_at: expiresAt, pairing, installer_script: installerScript });
   }
 
 
