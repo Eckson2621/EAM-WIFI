@@ -48,7 +48,7 @@ This identity/heartbeat foundation is now extended by authenticated event pollin
 
 After the business subscription is active, the owner opens the business dashboard and selects Connect MikroTik router. EAM-WIFI creates a one-time 256-bit token with a 10-minute initial pairing window. The token is displayed once. Copy the commands shown by the dashboard and paste them into the MikroTik Terminal. The commands download and import the public connector script at /downloads/eam-wifi-agent.rsc.
 
-The script is designed for RouterOS 7.13+ and:
+The import command is `/import file-name=eam-wifi-agent.rsc`. The saved script contains the router credential so it survives reboot. The script is designed for RouterOS 7.13+ and:
 - sends outbound HTTPS heartbeat to https://wifi.eckson.workers.dev/api/router/heartbeat;
 - polls /api/router/events every 15 seconds;
 - creates the Hotspot user/profile for voucher-redemption events;
@@ -56,7 +56,7 @@ The script is designed for RouterOS 7.13+ and:
 - acknowledges each event through /api/router/events/complete;
 - never opens an inbound RouterOS API port.
 
-Allow DNS and outbound TCP 443 from the router. Keep the pairing token on the router; do not paste it into support messages, screenshots or GitHub. After successful first pairing the database renews the device credential for one year. A fresh pairing can rotate/revoke a credential.
+Allow DNS and outbound TCP 443 from the router. Keep the configured installer private; it contains the pairing token. Do not paste it into support messages, screenshots or GitHub. After successful first pairing the database renews the device credential for one year. A fresh pairing can rotate/revoke a credential.
 
 The connector is a RouterOS script template, not a claim that every RouterOS version or Hotspot configuration has been tested. Test on the exact router model/RouterOS release, validate the Hotspot login page and walled garden, and inspect EAM-WIFI router status before serving paying customers. MikroTik Hotspot is the first supported integration; arbitrary router brands are not remotely provisioned yet.
 
