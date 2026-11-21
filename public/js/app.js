@@ -320,6 +320,26 @@ async function loadWorkspace() {
       }
     }
     info.append(name, meta);
+    try {
+      const routers = await api(`/api/routers?organization_id=${encodeURIComponent(membership.organization_id)}`);
+      const routerInfo = document.createElement("small");
+      if (!routers.length) {
+        routerInfo.textContent = "Router: not registered";
+      } else {
+        routerInfo.textContent = "Router: " + routers.map((router) => {
+          const fresh = router.last_seen_at && Date.now() - new Date(router.last_seen_at).getTime() < 120000;
+          const state = router.connection_status === "online" && fresh ? "ONLINE" :
+            router.connection_status === "pairing_pending" ? "PAIRING PENDING" :
+            router.connection_status === "online" ? "STALE HEARTBEAT" : String(router.connection_status || "UNKNOWN").toUpperCase();
+          return (router.name || router.model || router.vendor || "MikroTik") + " — " + state;
+        }).join(" | ");
+      }
+      info.append(routerInfo);
+    } catch (error) {
+      const routerInfo = document.createElement("small");
+      routerInfo.textContent = "Router status unavailable: " + error.message;
+      info.append(routerInfo);
+    }
     if (membership.role === "owner" || membership.role === "admin") {
       const portalLink = document.createElement("a");
       portalLink.href = `/portal?site=${encodeURIComponent(membership.organization?.slug || "")}`;
