@@ -78,8 +78,14 @@ async function loadPortal() {
     const title = document.createElement("strong");
     title.textContent = pkg.name;
     const detail = document.createElement("div");
-    const duration = pkg.duration_seconds ? (pkg.duration_seconds / 3600).toFixed(1) + " hours access" : "Duration set by provider";
-    detail.textContent = (pkg.description ? pkg.description + " · " : "") + duration;
+    const duration = pkg.duration_seconds ? (pkg.duration_seconds / 3600).toFixed(1) + " hours" : "Duration set by provider";
+    const limits = [];
+    limits.push(pkg.session_mode === "wall_clock" ? "Wall-clock timer" : "Connected-time timer");
+    if (pkg.data_limit_bytes) limits.push((pkg.data_limit_bytes / 1024 ** 3).toFixed(2) + " GB data");
+    if (pkg.speed_down_kbps || pkg.speed_up_kbps) limits.push((Number(pkg.speed_down_kbps || 0) / 1000).toFixed(1) + " Mbps down / " + (Number(pkg.speed_up_kbps || 0) / 1000).toFixed(1) + " Mbps up");
+    if (pkg.max_devices) limits.push("Up to " + pkg.max_devices + " device(s)");
+    if (pkg.validity_seconds && pkg.session_mode !== "wall_clock") limits.push("Use within " + (pkg.validity_seconds / 86400).toFixed(1) + " days");
+    detail.textContent = (pkg.description ? pkg.description + " · " : "") + duration + " · " + limits.join(" · ");
     const price = document.createElement("div");
     price.className = "price";
     price.textContent = money(pkg.price_tzs);
