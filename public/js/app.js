@@ -474,6 +474,52 @@ async function loadPackages(organizationId, role = "operator") {
     host.replaceChildren();
 
     if (canManage) {
+      const settingsCard = document.createElement("section");
+      settingsCard.className = "package-manager stack";
+      const settingsHeading = document.createElement("div");
+      settingsHeading.innerHTML = "<h3>Customer contact and payment details · Mawasiliano na malipo</h3><p class='muted small'>These details appear on your public Wi-Fi login page. Customers pay your business directly; confirm the payment before issuing their voucher.</p>";
+      const settingsForm = document.createElement("form");
+      settingsForm.className = "package-form";
+      settingsForm.innerHTML = `
+        <label>Business contact phone · Simu ya biashara<input name="business_phone" type="tel" minlength="7" maxlength="20" required placeholder="+255..."></label>
+        <label>Mobile money payment number · Namba ya malipo<input name="payment_phone" type="tel" minlength="7" maxlength="20" required placeholder="+255..."></label>
+        <label class="full-span">Payment instructions · Maelekezo ya malipo<textarea name="payment_instructions" maxlength="500" rows="2" placeholder="Example: Pay the exact package price to this number, then call us with the transaction reference."></textarea></label>
+        <div class="package-form-actions"><button class="primary" type="submit">Save customer payment details</button><small data-feedback class="muted"></small></div>
+      `;
+      settingsHeading.append(settingsForm);
+      settingsCard.append(settingsHeading);
+      host.append(settingsCard);
+      const settingsFeedback = settingsForm.querySelector("[data-feedback]");
+      try {
+        const rows = await api(`/api/business/settings?organization_id=${encodeURIComponent(organizationId)}`);
+        const row = rows[0] || {};
+        const org = Array.isArray(row.organization) ? row.organization[0] : row.organization;
+        settingsForm.elements.business_phone.value = org?.contact_phone || "";
+        settingsForm.elements.payment_phone.value = row.payment_phone || org?.contact_phone || "";
+        settingsForm.elements.payment_instructions.value = row.payment_instructions || "";
+      } catch (error) {
+        settingsFeedback.textContent = "Could not load payment details: " + error.message;
+      }
+      settingsForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const save = settingsForm.querySelector("button[type=submit]");
+        save.disabled = true;
+        settingsFeedback.textContent = "Saving…";
+        try {
+          await api("/api/business/settings", { method: "PATCH", body: JSON.stringify({
+            organization_id: organizationId,
+            business_phone: settingsForm.elements.business_phone.value.trim(),
+            payment_phone: settingsForm.elements.payment_phone.value.trim(),
+            payment_instructions: settingsForm.elements.payment_instructions.value.trim()
+          }) });
+          settingsFeedback.textContent = "Saved. Customers will see the updated numbers on your Wi-Fi portal.";
+        } catch (error) {
+          settingsFeedback.textContent = error.message;
+        } finally { save.disabled = false; }
+      });
+    }
+
+    if (canManage) {
       const manager = document.createElement("section");
       manager.className = "package-manager stack";
       const heading = document.createElement("div");
