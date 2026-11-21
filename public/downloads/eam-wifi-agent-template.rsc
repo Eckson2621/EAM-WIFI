@@ -49,14 +49,14 @@
         :local mode ($payload->"session_mode")
         :local dataLimit 0
         :local dataValue ($payload->"data_limit_bytes")
-        :if ([:len [:tostr $dataValue]] > 0) do={ :set dataLimit [:tonum $dataValue] }
+        :if ([:typeof $dataValue] != "nil") do={ :set dataLimit [:tonum $dataValue] }
         :local maxDevices [:tonum ($payload->"max_devices")]
         :local down 0
         :local downValue ($payload->"speed_down_kbps")
-        :if ([:len [:tostr $downValue]] > 0) do={ :set down [:tonum $downValue] }
+        :if ([:typeof $downValue] != "nil") do={ :set down [:tonum $downValue] }
         :local up 0
         :local upValue ($payload->"speed_up_kbps")
-        :if ([:len [:tostr $upValue]] > 0) do={ :set up [:tonum $upValue] }
+        :if ([:typeof $upValue] != "nil") do={ :set up [:tonum $upValue] }
         :local profileName ("EAMWIFI-" . [:pick $sessionId 0 8])
         :if ([:len $username] < 8 || [:len $password] < 8) do={ :error "Invalid voucher session credentials" }
         :if ($mode = "connected_time" && $duration < 1) do={ :error "Invalid connected-time duration" }
