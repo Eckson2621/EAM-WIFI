@@ -1,12 +1,8 @@
 # EAM-WIFI MikroTik RouterOS 7 connector
 # Router-initiated HTTPS only. Do not expose RouterOS API/Winbox to the public internet.
-# Set :global EAM_WIFI_TOKEN "<one-time-token-from-the-owner-dashboard>" before importing.
+# The authenticated owner dashboard inserts a one-time credential in the saved script.
+# The credential is stored in RouterOS script source and survives router reboot.
 # Designed for RouterOS 7.13+; test on a spare router before production.
-
-:global EAM_WIFI_TOKEN
-:global EAM_WIFI_BASE "https://wifi.eckson.workers.dev"
-
-:if ([:len $EAM_WIFI_TOKEN] < 32) do={ :error "Set the one-time EAM_WIFI_TOKEN first." }
 
 /system script remove [find where name="eam-wifi-agent"]
 /system scheduler remove [find where name="eam-wifi-agent"]
