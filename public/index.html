@@ -87,7 +87,9 @@
       <form id="business-form" class="registration-grid">
         <label>Business name<input name="business_name" required minlength="2" maxlength="120" placeholder="Enter your business name first"></label>
         <label>Owner full name<input name="owner_name" required minlength="2" autocomplete="name"></label>
-        <label>Business phone number<input name="contact_phone" type="tel" required minlength="7" placeholder="+255..."></label>
+        <label>Business contact phone · Namba ya mawasiliano<input name="contact_phone" type="tel" required minlength="7" placeholder="+255..."></label>
+        <label>Customer payment phone · Namba ya kupokea malipo<input name="payment_phone" type="tel" required minlength="7" placeholder="+255..."></label>
+        <label class="full-span">Customer payment instructions · Maelekezo ya malipo<textarea name="payment_instructions" maxlength="500" rows="2" placeholder="Tell customers how to pay for a package and share their payment reference."></textarea></label>
         <label>Country code<input name="country_code" required value="TZ" maxlength="2" pattern="[A-Za-z]{2}" title="Two-letter country code, e.g. TZ"></label>
         <label>Currency code<input name="currency_code" required value="TZS" maxlength="3" pattern="[A-Za-z]{3}" title="Three-letter currency code, e.g. TZS"></label>
         <label>Time zone<input name="timezone" required value="Africa/Dar_es_Salaam" placeholder="Africa/Dar_es_Salaam"></label>
