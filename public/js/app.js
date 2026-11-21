@@ -451,6 +451,7 @@ async function loadPlatformHealth() {
       ["Businesses active / pending", number(s.businesses_active) + " / " + number(s.businesses_pending)],
       ["Routers online / total", number(s.routers_online) + " / " + number(s.routers_total)],
       ["Router heartbeat stale", number(s.routers_stale)],
+      ["Routers offline / error", number(s.routers_offline)],
       ["Routers not paired", number(s.routers_not_configured)],
       ["Router events pending / processing", number(s.router_events_pending) + " / " + number(s.router_events_processing)],
       ["Router events failed", number(s.router_events_failed)],
