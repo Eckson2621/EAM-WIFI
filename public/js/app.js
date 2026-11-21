@@ -390,7 +390,7 @@ async function loadWorkspace() {
             catch { command.focus(); command.select(); copy.textContent = "Select and copy command"; }
           });
           const details = document.createElement("p");
-          details.textContent = "Open Winbox or WebFig, upload the downloaded file into Files, then open Terminal and run the import command above. The installer creates a router agent and a 15-second scheduler. Allow DNS and outbound HTTPS port 443. Configure the Hotspot login profile for http-pap, or HTTPS login with a valid router certificate, so the external portal can post voucher credentials. Never expose RouterOS API or Winbox to the public internet.";
+          details.textContent = "Open Winbox or WebFig, upload the downloaded file into Files, then open Terminal and run the import command above. The router must already have working ISP internet, DNS, DHCP and a Hotspot server. The installer creates an agent and a 15-second scheduler; it does not configure the ISP/Wi-Fi/Hotspot itself. Allow outbound HTTPS port 443 and the EAM-WIFI walled garden. Configure Hotspot login-by=http-pap or HTTPS with a valid router certificate. Exclude Hotspot users from FastTrack so rate limits work. Never expose RouterOS API or Winbox to the public internet.";
           const portalTitle = document.createElement("strong");
           portalTitle.textContent = "Captive portal redirect for login.html";
           const slug = membership.organization?.slug || "";
