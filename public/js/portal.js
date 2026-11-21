@@ -10,6 +10,17 @@ function showMessage(text, type="error") {
 function money(value) {
   return "TSh " + Number(value || 0).toLocaleString("en-TZ");
 }
+function safeRouterLoginUrl() {
+  const raw = params.get("link-login-only") || "";
+  try {
+    const target = new URL(raw);
+    const host = target.hostname;
+    const octets = host.split(".").map(Number);
+    const privateIPv4 = octets.length === 4 && octets.every((v) => Number.isInteger(v) && v >= 0 && v <= 255)
+      && (octets[0] === 10 || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) || (octets[0] === 192 && octets[1] === 168));
+    return (target.protocol === "http:" || target.protocol === "https:") && privateIPv4 ? target.href : "";
+  } catch { return ""; }
+}
 async function loadPortal() {
   if (!site) throw new Error("Wi-Fi site details are missing. Please reconnect to the hotspot.");
   const response = await fetch("/api/public/portal?site=" + encodeURIComponent(site), { cache: "no-store" });
@@ -51,6 +62,9 @@ async function loadPortal() {
   } else if (!mac) {
     $("redeem-button").disabled = true;
     showMessage("Open this page from the Wi-Fi login screen so the router can identify your device.");
+  } else if (!safeRouterLoginUrl()) {
+    $("redeem-button").disabled = true;
+    showMessage("The router login link is missing or invalid. Reconnect to the Wi-Fi network and open its sign-in page again.");
   }
   const host = $("packages");
   host.replaceChildren();
@@ -93,18 +107,9 @@ $("redeem-form").addEventListener("submit", async (event) => {
     if (!response.ok || !data.ok) throw new Error(data.error || "Voucher could not be verified.");
     showMessage("Voucher accepted. " + (data.message || "The router is activating your internet session."), "success");
     $("voucher").value = "";
-    const loginTarget = params.get("link-login-only") || "";
+    const loginTarget = safeRouterLoginUrl();
     const originalTarget = params.get("link-orig") || "http://neverssl.com/";
-    let safeRouterLogin = false;
-    try {
-      const target = new URL(loginTarget);
-      const host = target.hostname;
-      const octets = host.split(".").map(Number);
-      const privateIPv4 = octets.length === 4 && octets.every((v) => Number.isInteger(v) && v >= 0 && v <= 255)
-        && (octets[0] === 10 || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) || (octets[0] === 192 && octets[1] === 168));
-      safeRouterLogin = (target.protocol === "http:" || target.protocol === "https:") && privateIPv4;
-    } catch {}
-    if (data.username && data.password && safeRouterLogin) {
+    if (data.username && data.password && loginTarget) {
       const form = document.createElement("form");
       form.method = "post";
       form.action = loginTarget;
