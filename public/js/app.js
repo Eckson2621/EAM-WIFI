@@ -277,7 +277,7 @@ async function loadWorkspace() {
   $("business-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("onboarding-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
-  if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformAccounts(), loadSupportInbox()]); }
+  if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformHealth(), loadPlatformAccounts(), loadSupportInbox()]); }
   await loadMySupportMessages();
   if (!memberships.length) {
     $("dashboard").classList.add("hidden");
@@ -439,6 +439,44 @@ async function loadPlatformStats() {
     $("platform-admin-message").textContent = "Dashboard data could not load: " + error.message;
   }
 }
+
+async function loadPlatformHealth() {
+  const host = $("platform-health");
+  if (!host) return;
+  host.textContent = "Checking routers, vouchers, sessions and support…";
+  try {
+    const s = await api("/api/platform/admin/health");
+    const number = (value) => Number(value || 0).toLocaleString();
+    const items = [
+      ["Businesses active / pending", number(s.businesses_active) + " / " + number(s.businesses_pending)],
+      ["Routers online / total", number(s.routers_online) + " / " + number(s.routers_total)],
+      ["Router heartbeat stale", number(s.routers_stale)],
+      ["Routers not paired", number(s.routers_not_configured)],
+      ["Router events pending / processing", number(s.router_events_pending) + " / " + number(s.router_events_processing)],
+      ["Router events failed", number(s.router_events_failed)],
+      ["Customer sessions queued / active", number(s.sessions_queued) + " / " + number(s.sessions_active)],
+      ["Sessions expired / blocked", number(s.sessions_expired) + " / " + number(s.sessions_blocked)],
+      ["Vouchers unused / redeemed", number(s.vouchers_unused) + " / " + number(s.vouchers_redeemed)],
+      ["Subscriptions active / pending", number(s.subscriptions_active) + " / " + number(s.subscriptions_pending)],
+      ["Subscriptions expired", number(s.subscriptions_expired)],
+      ["New support messages", number(s.support_new)]
+    ];
+    host.replaceChildren();
+    items.forEach(([label, value]) => {
+      const card = document.createElement("div");
+      card.className = "stat-card";
+      const title = document.createElement("span"); title.textContent = label;
+      const amount = document.createElement("strong"); amount.textContent = value;
+      card.append(title, amount); host.append(card);
+    });
+    $("platform-health-message").textContent = "Last checked: " + new Date(s.checked_at).toLocaleString() + ". Stale heartbeat means no router heartbeat for more than 2 minutes.";
+  } catch (error) {
+    host.textContent = "System check failed: " + error.message;
+    $("platform-health-message").textContent = "Refresh after checking the Worker and Supabase connection.";
+  }
+}
+
+if ($("health-refresh")) $("health-refresh").addEventListener("click", loadPlatformHealth);
 
 async function loadPlatformAccounts() {
   const host = $("platform-accounts");
@@ -790,7 +828,7 @@ $("onboarding-back-admin").addEventListener("click", async () => {
   $("dashboard").classList.add("hidden");
   $("platform-admin").classList.remove("hidden");
   $("platform-admin").scrollIntoView({ behavior: "smooth", block: "start" });
-  await Promise.all([loadPlatformStats(), loadPlatformAccounts()]);
+  await Promise.all([loadPlatformStats(), loadPlatformHealth(), loadPlatformAccounts()]);
 });
 
 $("admin-register-business").addEventListener("click", () => {
