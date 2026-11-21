@@ -330,6 +330,55 @@ async function loadWorkspace() {
       if (!membership.organization?.slug) portalLink.hidden = true;
       info.append(portalLink);
     }
+    if (membership.role === "owner" || membership.role === "admin") {
+      const pairButton = document.createElement("button");
+      pairButton.type = "button";
+      pairButton.className = "secondary";
+      pairButton.textContent = "Connect MikroTik router · Unganisha router";
+      const setupPanel = document.createElement("div");
+      setupPanel.className = "form-note hidden";
+      pairButton.addEventListener("click", async () => {
+        pairButton.disabled = true;
+        pairButton.textContent = "Preparing secure pairing…";
+        setupPanel.classList.remove("hidden");
+        setupPanel.textContent = "Generating a one-time router credential…";
+        try {
+          const pairing = await api("/api/router/pair", {
+            method: "POST",
+            body: JSON.stringify({ organization_id: membership.organization_id })
+          });
+          const commands = `:global EAM_WIFI_TOKEN "${pairing.device_token}"
+/tool fetch url="https://wifi.eckson.workers.dev/downloads/eam-wifi-agent.rsc" dst-path="eam-wifi-agent.rsc" check-certificate=yes
+/import file-name=eam-wifi-agent.rsc`;
+          setupPanel.replaceChildren();
+          const title = document.createElement("strong");
+          title.textContent = "One-time router pairing token";
+          const warning = document.createElement("p");
+          warning.textContent = "Copy these commands now. The token is shown once and expires in 10 minutes unless the router connects. Never share it.";
+          const code = document.createElement("textarea");
+          code.readOnly = true; code.rows = 4; code.value = commands;
+          const copy = document.createElement("button");
+          copy.type = "button"; copy.className = "secondary"; copy.textContent = "Copy MikroTik commands";
+          copy.addEventListener("click", async () => {
+            try { await navigator.clipboard.writeText(commands); copy.textContent = "Copied"; }
+            catch { code.focus(); code.select(); copy.textContent = "Select and copy commands"; }
+          });
+          const download = document.createElement("a");
+          download.href = "/downloads/eam-wifi-agent.rsc";
+          download.target = "_blank"; download.rel = "noopener";
+          download.textContent = "Open EAM-WIFI RouterOS 7 connector script";
+          const details = document.createElement("p");
+          details.textContent = "On the MikroTik, open Terminal and paste the commands. The router needs DNS and outbound HTTPS port 443. Do not expose RouterOS API or Winbox to the public internet.";
+          setupPanel.append(title, warning, code, copy, download, details);
+          pairButton.textContent = "Generate a new pairing token";
+        } catch (error) {
+          setupPanel.textContent = "Pairing failed: " + error.message;
+          pairButton.textContent = "Retry router pairing";
+        } finally { pairButton.disabled = false; }
+      });
+      card.append(pairButton, setupPanel);
+    }
+
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = "View packages";
