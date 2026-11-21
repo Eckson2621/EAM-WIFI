@@ -79,3 +79,5 @@ test("router event acknowledgement rejects malformed unauthenticated requests", 
 test("business payment settings endpoint requires authentication", async () => { const response = await worker.fetch(new Request("https://example.test/api/business/settings?organization_id=00000000-0000-0000-0000-000000000001"), {}); assert.equal(response.status, 401); });
 
 test("Super Admin health endpoint requires authentication", async () => { const response = await worker.fetch(new Request("https://example.test/api/platform/admin/health"), {}); assert.equal(response.status, 401); });
+
+test("router status endpoint requires authentication", async () => { const response = await worker.fetch(new Request("https://example.test/api/routers?organization_id=00000000-0000-0000-0000-000000000001"), {}); assert.equal(response.status, 401); });
