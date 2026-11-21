@@ -2,12 +2,24 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.js";
 
-test("health endpoint responds without database credentials", async () => {
+test("health endpoint reports missing Supabase configuration as unhealthy", async () => {
   const response = await worker.fetch(new Request("https://example.test/api/health"), {});
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 503);
   const body = await response.json();
   assert.equal(body.app, "EAM-WIFI");
+  assert.equal(body.ok, false);
+  assert.equal(body.supabase_configured, false);
+});
+
+test("health endpoint reports required Supabase configuration as present", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/health"), {
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test"
+  });
+  assert.equal(response.status, 200);
+  const body = await response.json();
   assert.equal(body.ok, true);
+  assert.equal(body.supabase_configured, true);
 });
 
 test("protected endpoints reject requests without a bearer token", async () => {

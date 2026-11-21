@@ -35,7 +35,13 @@ async function handleApi(request, env) {
   const path = url.pathname;
 
   if (request.method === "GET" && path === "/api/health") {
-    return json({ ok: true, app: "EAM-WIFI", supabase_project: "configured", timestamp: new Date().toISOString() });
+    const supabaseConfigured = Boolean(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY);
+    return json({
+      ok: supabaseConfigured,
+      app: "EAM-WIFI",
+      supabase_configured: supabaseConfigured,
+      timestamp: new Date().toISOString()
+    }, supabaseConfigured ? 200 : 503);
   }
 
   if (path === "/api/register-business" && request.method === "POST") {
