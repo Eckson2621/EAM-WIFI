@@ -1,4 +1,4 @@
-name: Deploy EAM-WIFI to Cloudflare Workers
+name: Deploy WIFI to Cloudflare Workers
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: eam-wifi-production-deploy
+  group: wifi-production-deploy
   cancel-in-progress: false
 
 jobs:
