@@ -52,27 +52,48 @@
         :local up [:tonum ($payload->"speed_up_kbps")]
         :local profileName ("EAMWIFI-" . [:pick $sessionId 0 8])
         :if ([:len $username] < 8 || [:len $password] < 8) do={ :error "Invalid voucher session credentials" }
-        :if ([:len [/ip hotspot user find where name=$username]] > 0) do={ :error "Voucher user already exists; refusing duplicate activation" }
-        :local profileArgs ("name=" . $profileName . " shared-users=" . $maxDevices)
-        :if ($down > 0 && $up > 0) do={
-          :set profileArgs ($profileArgs . " rate-limit=" . $up . "k/" . $down . "k")
+        :if ($mode = "connected_time" && $duration < 1) do={ :error "Invalid connected-time duration" }
+        :local profileId [/ip hotspot user profile find where name=$profileName]
+        :if ([:len $profileId] = 0) do={
+          /ip hotspot user profile add name=$profileName shared-users=$maxDevices
+          :set profileId [/ip hotspot user profile find where name=$profileName]
+        } else={
+          /ip hotspot user profile set $profileId shared-users=$maxDevices
         }
-        /ip hotspot user profile add name=$profileName shared-users=$maxDevices
         :if ($down > 0 && $up > 0) do={
-          /ip hotspot user profile set [find where name=$profileName] rate-limit=($up . "k/" . $down . "k")
+          /ip hotspot user profile set $profileId rate-limit=($up . "k/" . $down . "k")
+        }
+        :local userId [/ip hotspot user find where name=$username]
+        :if ([:len $userId] > 0) do={
+          :if ([/ip hotspot user get $userId comment] != ("EAM-WIFI:" . $sessionId)) do={ :error "Voucher username collision; refusing to overwrite another session" }
         }
         :if ($mode = "connected_time") do={
-          :if ($duration < 1) do={ :error "Invalid connected-time duration" }
           :if ($dataLimit > 0) do={
-            /ip hotspot user add name=$username password=$password profile=$profileName limit-uptime=($duration . "s") limit-bytes-total=$dataLimit comment=("EAM-WIFI:" . $sessionId)
+            :if ([:len $userId] = 0) do={
+              /ip hotspot user add name=$username password=$password profile=$profileName limit-uptime=($duration . "s") limit-bytes-total=$dataLimit comment=("EAM-WIFI:" . $sessionId)
+            } else={
+              /ip hotspot user set $userId password=$password profile=$profileName limit-uptime=($duration . "s") limit-bytes-total=$dataLimit
+            }
           } else={
-            /ip hotspot user add name=$username password=$password profile=$profileName limit-uptime=($duration . "s") comment=("EAM-WIFI:" . $sessionId)
+            :if ([:len $userId] = 0) do={
+              /ip hotspot user add name=$username password=$password profile=$profileName limit-uptime=($duration . "s") comment=("EAM-WIFI:" . $sessionId)
+            } else={
+              /ip hotspot user set $userId password=$password profile=$profileName limit-uptime=($duration . "s")
+            }
           }
         } else={
           :if ($dataLimit > 0) do={
-            /ip hotspot user add name=$username password=$password profile=$profileName limit-bytes-total=$dataLimit comment=("EAM-WIFI:" . $sessionId)
+            :if ([:len $userId] = 0) do={
+              /ip hotspot user add name=$username password=$password profile=$profileName limit-bytes-total=$dataLimit comment=("EAM-WIFI:" . $sessionId)
+            } else={
+              /ip hotspot user set $userId password=$password profile=$profileName limit-bytes-total=$dataLimit
+            }
           } else={
-            /ip hotspot user add name=$username password=$password profile=$profileName comment=("EAM-WIFI:" . $sessionId)
+            :if ([:len $userId] = 0) do={
+              /ip hotspot user add name=$username password=$password profile=$profileName comment=("EAM-WIFI:" . $sessionId)
+            } else={
+              /ip hotspot user set $userId password=$password profile=$profileName
+            }
           }
         }
         :set resultPayload {"username"=$username;"profile"=$profileName;"applied"=true}
