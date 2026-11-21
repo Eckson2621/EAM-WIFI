@@ -212,7 +212,7 @@ async function handleApi(request, env) {
     if (!upstream.ok) return new Response(body, { status: upstream.status, headers: JSON_HEADERS });
     const pairing = JSON.parse(body || "null");
     if (!env.ASSETS?.fetch) return json({ error: "Static router installer is not configured." }, 503);
-    const installerResponse = await env.ASSETS.fetch(new Request(new URL("/downloads/eam-wifi-agent.rsc", request.url)));
+    const installerResponse = await env.ASSETS.fetch(new Request(new URL("/downloads/eam-wifi-agent-template.rsc", request.url)));
     if (!installerResponse.ok) return json({ error: "Router installer template could not be loaded." }, 503);
     const installerTemplate = await installerResponse.text();
     if (!installerTemplate.includes("__EAM_WIFI_TOKEN__")) return json({ error: "Router installer template is invalid." }, 500);
