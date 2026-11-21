@@ -125,11 +125,71 @@ async function handleApi(request, env) {
     if (!upstream.ok) return json({ error: "Router authentication failed." }, 401);
     const device = await upstream.json();
     if (!device?.ok) return json({ error: "Router credential is invalid or expired." }, 401);
-    return json({ ok: true, device, next_poll_seconds: 15, capabilities: ["heartbeat"] });
+    return json({ ok: true, device, next_poll_seconds: 15, capabilities: ["heartbeat", "event_poll", "event_ack", "mikrotik_hotspot_user"] });
+  }
+
+  // Authenticated router event queue. Routers initiate outbound HTTPS only.
+  if (path === "/api/router/events" && request.method === "POST") {
+    const deviceToken = getToken(request);
+    if (!deviceToken || deviceToken.length < 32 || deviceToken.length > 200) return json({ error: "Router authentication required." }, 401);
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken));
+    const tokenHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/claim_router_events", {
+      method: "POST", body: JSON.stringify({ p_token_hash: tokenHash, p_limit: 20 })
+    });
+    const body = await upstream.text();
+    if (!upstream.ok) return json({ error: "Router event claim failed.", detail: body.slice(0, 500) }, upstream.status);
+    return new Response(body || "[]", { status: 200, headers: JSON_HEADERS });
+  }
+
+  if (path === "/api/router/events/complete" && request.method === "POST") {
+    const deviceToken = getToken(request);
+    if (!deviceToken || deviceToken.length < 32 || deviceToken.length > 200) return json({ error: "Router authentication required." }, 401);
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const eventId = String(input.event_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(eventId) || typeof input.success !== "boolean") return json({ error: "A valid event_id and boolean success are required." }, 400);
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken));
+    const tokenHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+    const resultPayload = input.result_payload && typeof input.result_payload === "object" && !Array.isArray(input.result_payload) ? input.result_payload : {};
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/complete_router_event", {
+      method: "POST",
+      body: JSON.stringify({
+        p_token_hash: tokenHash, p_event_id: eventId, p_success: input.success,
+        p_result_payload: resultPayload, p_error: String(input.error || "").slice(0, 1000) || null
+      })
+    });
+    const body = await upstream.text();
+    return new Response(body, { status: upstream.status, headers: JSON_HEADERS });
   }
 
   const token = getToken(request);
   if (!token) return json({ error: "Authentication required." }, 401);
+
+  if (path === "/api/business/settings" && ["GET", "PATCH"].includes(request.method)) {
+    const input = request.method === "PATCH" ? await request.json().catch(() => null) : null;
+    if (request.method === "PATCH" && !input) return json({ error: "Invalid JSON body." }, 400);
+    const organizationId = String(request.method === "GET" ? url.searchParams.get("organization_id") || "" : input.organization_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "A valid organization_id is required." }, 400);
+    if (request.method === "GET") {
+      const query = new URLSearchParams({
+        select: "payment_phone,payment_instructions,organization:organizations(contact_phone)",
+        organization_id: `eq.${organizationId}`
+      });
+      const upstream = await supabaseFetch(env, `/rest/v1/organization_settings?${query}`, { method: "GET" }, token);
+      return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+    }
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/update_business_contact_settings", {
+      method: "POST",
+      body: JSON.stringify({
+        p_organization_id: organizationId,
+        p_business_phone: String(input.business_phone || ""),
+        p_payment_phone: String(input.payment_phone || ""),
+        p_payment_instructions: String(input.payment_instructions || "")
+      })
+    }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
 
   if (path === "/api/router/pair" && request.method === "POST") {
     let input;
