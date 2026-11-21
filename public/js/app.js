@@ -371,7 +371,37 @@ async function loadWorkspace() {
           });
           const details = document.createElement("p");
           details.textContent = "Open Winbox or WebFig, upload the downloaded file into Files, then open Terminal and run the import command above. The installer creates a router agent and a 15-second scheduler. Allow DNS and outbound HTTPS port 443. Never expose RouterOS API or Winbox to the public internet.";
-          setupPanel.append(title, warning, download, command, copy, details);
+          const portalTitle = document.createElement("strong");
+          portalTitle.textContent = "Captive portal redirect for login.html";
+          const slug = membership.organization?.slug || "";
+          const portalSnippet = `<script>
+const portal = new URL("https://wifi.eckson.workers.dev/portal");
+portal.searchParams.set("site", "${slug}");
+portal.searchParams.set("mac", "$(mac)");
+portal.searchParams.set("link-login-only", "$(link-login-only)");
+portal.searchParams.set("link-orig", "$(link-orig)");
+window.location.replace(portal.toString());
+</script>`;
+          const portalCode = document.createElement("textarea");
+          portalCode.readOnly = true; portalCode.rows = 8; portalCode.value = portalSnippet;
+          const copyPortal = document.createElement("button");
+          copyPortal.type = "button"; copyPortal.className = "secondary"; copyPortal.textContent = "Copy captive portal redirect";
+          copyPortal.addEventListener("click", async () => {
+            try { await navigator.clipboard.writeText(portalSnippet); copyPortal.textContent = "Copied"; }
+            catch { portalCode.focus(); portalCode.select(); copyPortal.textContent = "Select and copy snippet"; }
+          });
+          const gardenTitle = document.createElement("strong");
+          gardenTitle.textContent = "Allow the portal before Wi-Fi login";
+          const gardenCode = document.createElement("textarea");
+          gardenCode.readOnly = true; gardenCode.rows = 2;
+          gardenCode.value = "/ip hotspot walled-garden add dst-host=wifi.eckson.workers.dev action=allow";
+          const copyGarden = document.createElement("button");
+          copyGarden.type = "button"; copyGarden.className = "secondary"; copyGarden.textContent = "Copy walled-garden command";
+          copyGarden.addEventListener("click", async () => {
+            try { await navigator.clipboard.writeText(gardenCode.value); copyGarden.textContent = "Copied"; }
+            catch { gardenCode.focus(); gardenCode.select(); copyGarden.textContent = "Select and copy command"; }
+          });
+          setupPanel.append(title, warning, download, command, copy, details, portalTitle, portalCode, copyPortal, gardenTitle, gardenCode, copyGarden);
           pairButton.textContent = "Generate a new pairing token";
         } catch (error) {
           setupPanel.textContent = "Pairing failed: " + error.message;
