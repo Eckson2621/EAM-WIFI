@@ -49,7 +49,7 @@ For the Hotspot server profile, enable the http-pap login method for this extern
 - A voucher cannot be redeemed without an active business subscription and an online paired MikroTik router.
 - Database creates one access session and router event for successful redemption.
 - RouterOS connector polls the event queue over outbound HTTPS every 15 seconds and acknowledges success/failure.
-- Connected-time is enforced by RouterOS limit-uptime; data caps by limit-bytes-total; profile speed and shared-user limits are applied per session.
+- Connected-time is enforced locally by RouterOS limit-uptime; data caps by limit-bytes-total; profile speed and shared-user limits are applied per session. A one-device voucher is bound to the redeeming MAC; packages allowing multiple devices use the Hotspot profile shared-users limit.
 - Wall-clock/validity expiry is queued by the database and the router removes the active user on its next successful poll (normally within one polling interval while connected).
 - If the router loses internet connectivity, cloud-side expiry events cannot reach it until it reconnects. RouterOS connected-time and data limits remain local; wall-clock expiry removal is delayed until connectivity returns. Do not advertise offline wall-clock enforcement as instantaneous.
 
