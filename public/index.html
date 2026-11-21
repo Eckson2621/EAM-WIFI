@@ -98,22 +98,23 @@
         <label>Router display name<input name="router_name" required placeholder="e.g. Main Router"></label>
         <label>Router brand
           <select name="router_vendor" required>
-            <option value="mikrotik">MikroTik</option>
-            <option value="ubiquiti">Ubiquiti</option>
-            <option value="tp_link">TP-Link</option>
-            <option value="huawei">Huawei</option>
-            <option value="other">Other</option>
+            <option value="mikrotik">MikroTik · automated connector supported</option>
+            <option value="ubiquiti">Ubiquiti · connector coming later</option>
+            <option value="tp_link">TP-Link · connector coming later</option>
+            <option value="huawei">Huawei · connector coming later</option>
+            <option value="other">Other · connector to be confirmed</option>
           </select>
         </label>
-        <label>Router model<input name="router_model" value="hAP ax² (C52iG-5HaxD2HaxD)" placeholder="e.g. hAP ax²"></label>
+        <label>Router model<input name="router_model" placeholder="e.g. MikroTik hAP ax²"></label>
         <label>Integration type
           <select name="integration_type" required>
-            <option value="mikrotik_hotspot">MikroTik Hotspot</option>
-            <option value="routeros_api">RouterOS API</option>
-            <option value="manual">Manual setup (temporary)</option>
-            <option value="other">Other / to be confirmed</option>
+            <option value="mikrotik_hotspot">MikroTik Hotspot · supported now</option>
+            <option value="routeros_api">RouterOS API · not enabled yet</option>
+            <option value="manual">Manual setup · no automatic voucher activation</option>
+            <option value="other">Other · to be confirmed</option>
           </select>
         </label>
+        <p class="muted small full-span">MikroTik Hotspot is the only automated router integration currently available. Other brands can be recorded, but cannot activate customer vouchers until their connector is built and tested.</p>
         <label>Router LAN IP (optional)<input name="management_address" placeholder="e.g. 192.168.88.1"></label>
         <label>Router API port (optional)<input name="api_port" type="number" min="1" max="65535" placeholder="8729"></label>
         <div class="form-note">
