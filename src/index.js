@@ -380,6 +380,13 @@ async function handleApi(request, env) {
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
 
+  if (path === "/api/platform/admin/health" && request.method === "GET") {
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_system_health", {
+      method: "POST", body: "{}"
+    }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
   if (path === "/api/platform/admin/accounts" && request.method === "GET") {
     const query = new URLSearchParams({
       select: "id,name,slug,contact_phone,status,created_at,platform_subscriptions(status,expires_at)",
