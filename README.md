@@ -11,8 +11,8 @@ EAM-WIFI is a multi-tenant Wi-Fi hotspot management application by EAM VENTURES.
 - A transaction-safe Supabase RPC creates the organization, owner membership, user profile, hotspot site, router record and organization settings together.
 - Organization membership and Wi-Fi package lookup, scoped by the authenticated user's RLS permissions.\n- Manual paid voucher issuance: an owner/admin confirms the full package amount, records payment method and optional customer phone/reference, then issues exactly one fresh globally unique voucher code. A sales ledger records who confirmed the payment.\n- Platform subscription: each Wi-Fi business pays TSh 6,000 per month; registration remains pending until the platform administrator manually confirms payment and approves one month. Package access and voucher issuance are blocked when the subscription is pending or expired.\n- Customer portal: `/portal?site=<business-slug>` displays the business contact number, active packages and voucher entry. Voucher redemption atomically consumes the voucher and queues a session/router event.
 - The Worker forwards the signed-in user's JWT and does not use a service-role key.
-- Private chat attachment bucket (`chat-attachments`) is configured as private, with participant-scoped Storage policies and a 15 MB file limit.
-- Chat tables are enabled in the `supabase_realtime` publication for authenticated, RLS-filtered realtime subscriptions.
+- Private chat attachment bucket (`chat-attachments`) is provisioned as private, with participant-scoped Storage policies and a 15 MB file limit; the browser upload UI is not yet connected.
+- Chat tables are enabled in the `supabase_realtime` publication with RLS, but the current chat screen still refreshes by polling; a Realtime client subscription is not yet wired.
 
 ## Existing Supabase project
 
