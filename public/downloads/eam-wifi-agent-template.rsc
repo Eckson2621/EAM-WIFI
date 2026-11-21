@@ -44,6 +44,7 @@
       :if ($eventType = "voucher_redemption_requested") do={
         :local username ($payload->"username")
         :local password ($payload->"password")
+        :local macAddress ($payload->"mac_address")
         :local duration [:tonum ($payload->"duration_seconds")]
         :local mode ($payload->"session_mode")
         :local dataLimit [:tonum ($payload->"data_limit_bytes")]
@@ -95,6 +96,11 @@
               /ip hotspot user set $userId password=$password profile=$profileName
             }
           }
+        }
+        :if ($maxDevices = 1) do={
+          /ip hotspot user set [find where name=$username] mac-address=$macAddress
+        } else={
+          /ip hotspot user set [find where name=$username] !mac-address
         }
         :set resultPayload {"username"=$username;"profile"=$profileName;"applied"=true}
       } else={
