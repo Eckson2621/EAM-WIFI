@@ -57,9 +57,11 @@ async function handleApi(request, env) {
       p_router_model: input.router_model || null,
       p_integration_type: input.integration_type,
       p_management_address: input.management_address || null,
-      p_api_port: input.api_port ? Number(input.api_port) : null
+      p_api_port: input.api_port ? Number(input.api_port) : null,
+      p_payment_phone: input.payment_phone || input.contact_phone,
+      p_payment_instructions: input.payment_instructions || null
     };
-    const upstream = await supabaseFetch(env, "/rest/v1/rpc/register_wifi_business", {
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/register_wifi_business_with_payment", {
       method: "POST", body: JSON.stringify(params)
     }, token);
     return new Response(await upstream.text(), {
