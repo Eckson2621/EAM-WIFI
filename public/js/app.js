@@ -670,7 +670,7 @@ async function loadPackages(organizationId, role = "operator") {
         <label>Package name · Jina<input name="name" required minlength="2" maxlength="100" placeholder="e.g. 2 Hours"></label>
         <label>Price (TZS) · Bei<input name="price_tzs" type="number" min="0" step="1" required></label>
         <label>Usage duration (hours) · Muda wa matumizi (saa)<input name="duration_hours" type="number" min="0.0003" step="0.01" required value="2"></label>
-        <label>Validity (days, optional) · Mwisho wa kutumia (siku)<input name="validity_days" type="number" min="0.0003" step="0.01" placeholder="e.g. 7"></label>
+        <label>Validity (days, connected-time only) · Muda wa mwisho (siku)<input name="validity_days" type="number" min="0.0003" step="0.01" placeholder="e.g. 7"></label>
         <label>Data limit (GB, optional) · Kiasi cha data (GB)<input name="data_gb" type="number" min="0.000001" step="0.01" placeholder="Unlimited if blank"></label>
         <label>Download speed (Mbps, optional) · Kasi ya kupakua<input name="down_mbps" type="number" min="0.000001" step="0.1"></label>
         <label>Upload speed (Mbps, optional) · Kasi ya kupakia<input name="up_mbps" type="number" min="0.000001" step="0.1"></label>
@@ -685,12 +685,19 @@ async function loadPackages(organizationId, role = "operator") {
 
       const feedback = form.querySelector("[data-feedback]");
       const cancel = form.querySelector("[data-cancel]");
+      const updateValidityControl = () => {
+        const wallClock = form.elements.session_mode.value === "wall_clock";
+        form.elements.validity_days.disabled = wallClock;
+        if (wallClock) form.elements.validity_days.value = "";
+      };
+      form.elements.session_mode.addEventListener("change", updateValidityControl);
       let editingId = null;
       const resetForm = () => {
         editingId = null;
         form.reset();
         form.elements.duration_hours.value = "2";
         form.elements.max_devices.value = "1";
+        updateValidityControl();
         form.querySelector("button[type=submit]").textContent = "Save package · Hifadhi kifurushi";
         cancel.hidden = true;
         feedback.textContent = "";
@@ -764,6 +771,7 @@ async function loadPackages(organizationId, role = "operator") {
           form.elements.up_mbps.value = item.speed_up_kbps ? (item.speed_up_kbps / 1000).toString() : "";
           form.elements.max_devices.value = item.max_devices || 1;
           form.elements.session_mode.value = item.session_mode || "connected_time";
+          updateValidityControl();
           form.elements.description.value = item.description || "";
           form.querySelector("button[type=submit]").textContent = "Update package · Sasisha kifurushi";
           cancel.hidden = false;
