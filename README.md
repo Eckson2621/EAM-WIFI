@@ -37,7 +37,7 @@ npm run dev
 2. Connect GitHub and select `Eckson2621/EAM-WIFI`, branch `main`.
 3. Configure the Worker using the repository's `wrangler.toml`.
 4. For automated deployment, add these GitHub repository Actions secrets:
-   - `CLOUDFLARE_API_TOKEN`: a Cloudflare API token with permission to edit Workers.
+   - `WIFI_BUILD_TOKEN`: a Cloudflare API token with permission to edit Workers Scripts in the target account.
    - `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID.
 5. Push to `main` or manually run the workflow from the Actions tab. It runs tests before deployment.
 
