@@ -347,29 +347,31 @@ async function loadWorkspace() {
             method: "POST",
             body: JSON.stringify({ organization_id: membership.organization_id })
           });
-          const commands = `:global EAM_WIFI_TOKEN "${pairing.device_token}"
-/tool fetch url="https://wifi.eckson.workers.dev/downloads/eam-wifi-agent.rsc" dst-path="eam-wifi-agent.rsc" check-certificate=yes
-/import file-name=eam-wifi-agent.rsc`;
+          if (!pairing.installer_script) throw new Error("The configured router installer was not returned.");
+          const installerBlob = new Blob([pairing.installer_script], { type: "text/plain" });
+          const installerUrl = URL.createObjectURL(installerBlob);
+          const importCommand = "/import file-name=eam-wifi-agent.rsc";
           setupPanel.replaceChildren();
           const title = document.createElement("strong");
-          title.textContent = "One-time router pairing token";
+          title.textContent = "Secure MikroTik pairing is ready";
           const warning = document.createElement("p");
-          warning.textContent = "Copy these commands now. The token is shown once and expires in 10 minutes unless the router connects. Never share it.";
-          const code = document.createElement("textarea");
-          code.readOnly = true; code.rows = 4; code.value = commands;
-          const copy = document.createElement("button");
-          copy.type = "button"; copy.className = "secondary"; copy.textContent = "Copy MikroTik commands";
-          copy.addEventListener("click", async () => {
-            try { await navigator.clipboard.writeText(commands); copy.textContent = "Copied"; }
-            catch { code.focus(); code.select(); copy.textContent = "Select and copy commands"; }
-          });
+          warning.textContent = "This configured installer contains your one-time router credential. Download it now and keep it private. The initial pairing window ends at " + new Date(pairing.expires_at).toLocaleString() + ".";
           const download = document.createElement("a");
-          download.href = "/downloads/eam-wifi-agent.rsc";
-          download.target = "_blank"; download.rel = "noopener";
-          download.textContent = "Open EAM-WIFI RouterOS 7 connector script";
+          download.href = installerUrl;
+          download.download = "eam-wifi-agent.rsc";
+          download.className = "portal-link";
+          download.textContent = "Download your configured MikroTik installer";
+          const command = document.createElement("textarea");
+          command.readOnly = true; command.rows = 2; command.value = importCommand;
+          const copy = document.createElement("button");
+          copy.type = "button"; copy.className = "secondary"; copy.textContent = "Copy import command";
+          copy.addEventListener("click", async () => {
+            try { await navigator.clipboard.writeText(importCommand); copy.textContent = "Copied"; }
+            catch { command.focus(); command.select(); copy.textContent = "Select and copy command"; }
+          });
           const details = document.createElement("p");
-          details.textContent = "On the MikroTik, open Terminal and paste the commands. The router needs DNS and outbound HTTPS port 443. Do not expose RouterOS API or Winbox to the public internet.";
-          setupPanel.append(title, warning, code, copy, download, details);
+          details.textContent = "Open Winbox or WebFig, upload the downloaded file into Files, then open Terminal and run the import command above. The installer creates a router agent and a 15-second scheduler. Allow DNS and outbound HTTPS port 443. Never expose RouterOS API or Winbox to the public internet.";
+          setupPanel.append(title, warning, download, command, copy, details);
           pairButton.textContent = "Generate a new pairing token";
         } catch (error) {
           setupPanel.textContent = "Pairing failed: " + error.message;
