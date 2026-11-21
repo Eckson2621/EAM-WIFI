@@ -12,9 +12,8 @@
 /system scheduler remove [find where name="eam-wifi-agent"]
 
 /system script add name="eam-wifi-agent" policy=read,write,test,ftp,policy,password,sensitive source={
-  :global EAM_WIFI_TOKEN
-  :global EAM_WIFI_BASE
-  :local headers ("Authorization: Bearer " . $EAM_WIFI_TOKEN)
+  :local EAM_WIFI_TOKEN "__EAM_WIFI_TOKEN__"
+  :local EAM_WIFI_BASE "https://wifi.eckson.workers.dev"
   :local jsonHeaders ("Authorization: Bearer " . $EAM_WIFI_TOKEN . ",Content-Type: application/json")
   :local heartbeat
   :local hbData
