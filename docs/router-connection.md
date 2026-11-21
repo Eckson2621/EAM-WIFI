@@ -42,3 +42,31 @@ The registration RPC creates the organization, owner membership, hotspot site, r
 - RouterOS v7 heartbeat starter: `mikrotik/eam-wifi-heartbeat.rsc`.
 
 This is only the secure identity/heartbeat foundation. It does not yet apply voucher jobs to RouterOS or turn on internet access.
+
+
+## Owner dashboard pairing and RouterOS connector
+
+After the business subscription is active, the owner opens the business dashboard and selects Connect MikroTik router. EAM-WIFI creates a one-time 256-bit token with a 10-minute initial pairing window. The token is displayed once. Copy the commands shown by the dashboard and paste them into the MikroTik Terminal. The commands download and import the public connector script at /downloads/eam-wifi-agent.rsc.
+
+The script is designed for RouterOS 7.13+ and:
+- sends outbound HTTPS heartbeat to https://wifi.eckson.workers.dev/api/router/heartbeat;
+- polls /api/router/events every 15 seconds;
+- creates the Hotspot user/profile for voucher-redemption events;
+- removes the Hotspot user for session-expiry events;
+- acknowledges each event through /api/router/events/complete;
+- never opens an inbound RouterOS API port.
+
+Allow DNS and outbound TCP 443 from the router. Keep the pairing token on the router; do not paste it into support messages, screenshots or GitHub. After successful first pairing the database renews the device credential for one year. A fresh pairing can rotate/revoke a credential.
+
+The connector is a RouterOS script template, not a claim that every RouterOS version or Hotspot configuration has been tested. Test on the exact router model/RouterOS release, validate the Hotspot login page and walled garden, and inspect EAM-WIFI router status before serving paying customers. MikroTik Hotspot is the first supported integration; arbitrary router brands are not remotely provisioned yet.
+
+## Operational verification checklist
+
+1. Confirm the router appears Online in the business dashboard after pairing.
+2. Confirm the router event queue is empty after test events are acknowledged.
+3. Create a low-value test package and issue a test voucher after recording test payment.
+4. Redeem from a phone on the hotspot; confirm automatic router login and internet access.
+5. Confirm /ip hotspot user print shows the EAM-WIFI user with expected uptime/data/profile limits.
+6. Test duplicate redemption, wrong code, wrong business, disabled package, expired voucher and offline router; all must be rejected.
+7. Test connected-time exhaustion, data-cap exhaustion and wall-clock expiry. Confirm the active user is disconnected/removed and the database session reaches expected status.
+8. Repeat after router reboot and temporary internet outage. Do not declare production-ready until these tests pass.
