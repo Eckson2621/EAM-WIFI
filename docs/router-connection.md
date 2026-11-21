@@ -30,7 +30,7 @@ For MikroTik, the next implementation should use a RouterOS-compatible outbound 
 
 The registration RPC creates the organization, owner membership, hotspot site, router metadata record, and organization settings in one database transaction. It marks the organization as `pending` and the router as `not_configured`.
 
-**This is registration, not a live router connection.** Device pairing, RouterOS command execution, live status/heartbeat, captive portal, and real customer session enforcement are still to be implemented and tested.
+**Registration alone is not a live router connection.** The owner must complete the dashboard pairing and install the RouterOS connector before the router is online. The connector applies voucher user limits, but its behavior must be tested on the exact physical router and RouterOS release.
 
 
 ## Implemented connector foundation (November 2026)
@@ -41,7 +41,7 @@ The registration RPC creates the organization, owner membership, hotspot site, r
 - Router-initiated HTTPS heartbeat at `POST /api/router/heartbeat`; updates the registered MikroTik device's connected status and last-seen timestamp.
 - RouterOS v7 heartbeat starter: `mikrotik/eam-wifi-heartbeat.rsc`.
 
-This is only the secure identity/heartbeat foundation. It does not yet apply voucher jobs to RouterOS or turn on internet access.
+This identity/heartbeat foundation is now extended by authenticated event polling and acknowledgement. The RouterOS connector template is stored in public/downloads/eam-wifi-agent.rsc; physical router behavior still requires device testing.
 
 
 ## Owner dashboard pairing and RouterOS connector
