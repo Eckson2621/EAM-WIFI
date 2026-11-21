@@ -20,13 +20,28 @@ Payment automation note: Customers pay the business, not EAM-WIFI. EAM-WIFI is n
 
 ## Captive portal configuration
 
-The MikroTik Hotspot login page must redirect to EAM-WIFI and preserve the router login URL, original destination and client MAC. Intended redirect URL:
+The MikroTik Hotspot login page must redirect to EAM-WIFI and preserve the router login URL, original destination and client MAC. In a copy of the router's Hotspot login.html, use a redirect block like this and replace the business slug with the slug shown in the owner dashboard:
 
-https://wifi.eckson.workers.dev/portal?site=<organization-slug>&mac=$(mac)&link-login-only=$(link-login-only)&link-orig=$(link-orig)
+```html
+<script>
+  const portal = new URL("https://wifi.eckson.workers.dev/portal");
+  portal.searchParams.set("site", "YOUR-ORGANIZATION-SLUG");
+  portal.searchParams.set("mac", "$(mac)");
+  portal.searchParams.set("link-login-only", "$(link-login-only)");
+  portal.searchParams.set("link-orig", "$(link-orig)");
+  window.location.replace(portal.toString());
+</script>
+```
 
-The hosted portal auto-posts credentials only to a private IPv4 router address (10/8, 172.16/12 or 192.168/16). This prevents a modified portal URL from sending generated hotspot credentials to an arbitrary external host.
+Using URLSearchParams safely encodes the router's login URL even when that URL contains its own query parameters. The hosted portal auto-posts credentials only to a private IPv4 router address (10/8, 172.16/12 or 192.168/16), preventing a modified portal URL from sending generated hotspot credentials to an arbitrary external host.
 
-Add the EAM-WIFI host to the Hotspot walled garden so unauthenticated clients can load the portal and its assets. Verify the actual RouterOS version's login-page variables before replacing the default login page.
+Allow the EAM-WIFI hostname before login. On the MikroTik, add it to the Hotspot walled garden:
+
+```routeros
+/ip hotspot walled-garden add dst-host=wifi.eckson.workers.dev action=allow
+```
+
+Confirm the actual RouterOS version's login-page variables and test the redirect from a phone before replacing the production login page.
 
 ## Voucher and timer enforcement
 
