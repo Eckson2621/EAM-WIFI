@@ -21,14 +21,29 @@ async function loadPortal() {
   const phone = String(data.contact_phone || "").trim();
   if (phone) {
     const text = document.createElement("p");
-    text.textContent = "To buy a voucher, call: " + phone;
+    text.textContent = "Business contact: " + phone;
     const link = document.createElement("a");
     link.className = "call";
     link.href = "tel:" + phone.replace(/[^+0-9]/g, "");
     link.textContent = "Call business";
     contact.append(text, link);
   } else {
-    contact.textContent = "Contact the Wi-Fi business to purchase a voucher.";
+    contact.textContent = "Contact the Wi-Fi business for assistance.";
+  }
+  const payPhone = String(data.payment_phone || phone || "").trim();
+  if (payPhone) {
+    const payment = document.createElement("p");
+    payment.textContent = "Pay for your selected package to this business number: " + payPhone;
+    const payLink = document.createElement("a");
+    payLink.className = "call";
+    payLink.href = "tel:" + payPhone.replace(/[^+0-9]/g, "");
+    payLink.textContent = "Call / copy payment number";
+    contact.append(payment, payLink);
+  }
+  if (data.payment_instructions) {
+    const instructions = document.createElement("p");
+    instructions.textContent = "Payment instructions: " + data.payment_instructions;
+    contact.append(instructions);
   }
   if (!data.router_ready) {
     $("redeem-button").disabled = true;
@@ -76,8 +91,32 @@ $("redeem-form").addEventListener("submit", async (event) => {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.ok) throw new Error(data.error || "Voucher could not be verified.");
-    showMessage("Voucher accepted. " + (data.message || "Waiting for the router to activate your internet session."), "success");
+    showMessage("Voucher accepted. " + (data.message || "The router is activating your internet session."), "success");
     $("voucher").value = "";
+    const loginTarget = params.get("link-login-only") || "";
+    const originalTarget = params.get("link-orig") || "http://neverssl.com/";
+    let safeRouterLogin = false;
+    try {
+      const target = new URL(loginTarget);
+      const host = target.hostname;
+      const octets = host.split(".").map(Number);
+      const privateIPv4 = octets.length === 4 && octets.every((v) => Number.isInteger(v) && v >= 0 && v <= 255)
+        && (octets[0] === 10 || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) || (octets[0] === 192 && octets[1] === 168));
+      safeRouterLogin = (target.protocol === "http:" || target.protocol === "https:") && privateIPv4;
+    } catch {}
+    if (data.username && data.password && safeRouterLogin) {
+      const form = document.createElement("form");
+      form.method = "post";
+      form.action = loginTarget;
+      for (const [name, value] of [["username", data.username], ["password", data.password], ["dst", originalTarget]]) {
+        const field = document.createElement("input");
+        field.type = "hidden"; field.name = name; field.value = value; form.append(field);
+      }
+      document.body.append(form);
+      form.submit();
+    } else {
+      showMessage("Voucher accepted. If the router login does not open automatically, reconnect to this Wi-Fi and contact the business owner. " + (data.message || ""), "success");
+    }
   } catch (error) {
     showMessage(error.message);
   } finally {
