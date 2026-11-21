@@ -2,11 +2,15 @@ name: Deploy EAM-WIFI to Cloudflare Workers
 
 on:
   push:
-    branches: [main, "**"]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: eam-wifi-production-deploy
+  cancel-in-progress: false
 
 jobs:
   test-and-deploy:
@@ -26,9 +30,15 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run tests
         run: npm test
+      - name: Verify Cloudflare credentials are configured
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::GitHub Actions secret WIFI_BUILD_TOKEN is missing."
+            exit 1
+          fi
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is missing."
+            exit 1
+          fi
       - name: Deploy wifi Worker and static assets
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         run: npx wrangler deploy --name wifi
-      - name: Explain skipped deployment
-        if: ${{ github.event_name != 'workflow_dispatch' || github.ref != 'refs/heads/main' || env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == '' }}
-        run: echo "Tests passed. Deployment is manual-only on main and requires valid Cloudflare credentials."
