@@ -11,13 +11,15 @@ EAM-WIFI is a multi-tenant Wi-Fi hotspot management application by EAM VENTURES.
 - A transaction-safe Supabase RPC creates the organization, owner membership, user profile, hotspot site, router record and organization settings together.
 - Organization membership and Wi-Fi package lookup, scoped by the authenticated user's RLS permissions.\n- Manual paid voucher issuance: an owner/admin confirms the full package amount, records payment method and optional customer phone/reference, then issues exactly one fresh globally unique voucher code. A sales ledger records who confirmed the payment.\n- Platform subscription: each Wi-Fi business pays TSh 6,000 per month; registration remains pending until the platform administrator manually confirms payment and approves one month. Package access and voucher issuance are blocked when the subscription is pending or expired.\n- Customer portal: `/portal?site=<business-slug>` displays the business contact number, active packages and voucher entry. Voucher redemption atomically consumes the voucher and queues a session/router event.
 - The Worker forwards the signed-in user's JWT and does not use a service-role key.
+- Private chat attachment bucket (`chat-attachments`) is configured as private, with participant-scoped Storage policies and a 15 MB file limit.
+- Chat tables are enabled in the `supabase_realtime` publication for authenticated, RLS-filtered realtime subscriptions.
 
 ## Existing Supabase project
 
-- Project ref: `jrgmzajlmuqpslhhroez`
-- API URL: `https://jrgmzajlmuqpslhhroez.supabase.co`
+- Project ref: `jvzjzmfnxytryzpylrqj`
+- API URL: `https://jvzjzmfnxytryzpylrqj.supabase.co`
 
-The application reuses the existing database schema; it does not create duplicate tables. The registration function is also stored in `database/register_wifi_business.sql`.
+The application uses this project as its active database. Database schema and security updates are tracked in the Supabase migration history. The registration function is also stored in `database/register_wifi_business.sql`.
 
 ## Run locally
 
@@ -53,7 +55,10 @@ A private router address such as `192.168.88.1` cannot be reached directly from 
 - Only authenticated users can execute it; anonymous execution is revoked.
 - The registration operation is atomic: if any record insert fails, the transaction rolls back.
 - The router password/API secret is deliberately not collected or stored by the registration form.
-- Security Advisor returned zero lint findings after the registration RPC was added. Real authenticated cross-organization tests and router pairing tests are still required before production use.
+- RLS is enabled on all 24 public application tables and both private credential/admin tables. Direct anonymous table privileges are revoked; public captive-portal and router-auth RPCs are the only intentional anonymous database entry points.
+- Admin-only SECURITY DEFINER RPCs enforce the authenticated Super Admin identity in their function bodies. The private schema has no client table policies, so direct reads are denied; trusted definer functions perform the required internal lookups.
+- Security Advisor may still report informational private-table RLS-without-policy notices (intentional deny-by-default), the two authenticated Super Admin SECURITY DEFINER RPCs (they enforce the Super Admin check), and leaked-password protection disabled in Auth. Enable leaked-password protection in the Supabase Auth password-security settings before production.
+- Real authenticated cross-organization tests, browser-based chat attachment/realtime tests, and router pairing tests are still required before production use.
 
 ## Repository layout
 
