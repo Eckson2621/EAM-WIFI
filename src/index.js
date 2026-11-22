@@ -426,11 +426,9 @@ async function handleApi(request, env) {
   }
 
   if (path === "/api/platform/admin/routers" && request.method === "GET") {
-    const query = new URLSearchParams({
-      select: "id,organization_id,name,vendor,model,connection_status,last_seen_at,created_at,organization:organizations(name,contact_phone),site:hotspot_sites(name,slug),router_subscriptions(status,expires_at,monthly_price_tzs)",
-      order: "created_at.desc"
-    });
-    const upstream = await supabaseFetch(env, `/rest/v1/network_devices?${query}`, { method: "GET" }, token);
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_list_router_subscriptions", {
+      method: "POST", body: "{}"
+    }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
 
