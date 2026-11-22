@@ -279,13 +279,90 @@ setInterval(() => {
 }, 1000);
 function setPlatformCallNotice(element, message) {
   element.replaceChildren();
-  const text = document.createElement("span");
-  text.textContent = message + " Call: " + PLATFORM_PHONE + " ";
-  const link = document.createElement("a");
-  link.href = "tel:" + PLATFORM_PHONE;
-  link.textContent = "Call now";
-  link.className = "portal-link";
-  element.append(text, link);
+  const text = document.createElement("p");
+  text.textContent = message + " Contact the Super Admin using the saved support number.";
+  const actions = document.createElement("div");
+  actions.style.cssText = "display:flex;gap:14px;flex-wrap:wrap;margin-top:8px";
+  const call = document.createElement("a");
+  call.href = "tel:" + PLATFORM_PHONE;
+  call.textContent = "Piga simu · Call";
+  call.className = "portal-link";
+  const sms = document.createElement("a");
+  sms.href = "sms:" + PLATFORM_PHONE + "?body=" + encodeURIComponent("Habari Super Admin, nimejisajili EAM-WIFI. Tafadhali nisaidie kuhusu idhini ya akaunti yangu.");
+  sms.textContent = "Tuma SMS";
+  sms.className = "portal-link";
+  const waNumber = PLATFORM_PHONE.replace(/\\D/g, "").replace(/^0/, "255");
+  const whatsapp = document.createElement("a");
+  whatsapp.href = "https://wa.me/" + waNumber + "?text=" + encodeURIComponent("Habari Super Admin, nimejisajili EAM-WIFI. Tafadhali nisaidie kuhusu idhini ya akaunti yangu.");
+  whatsapp.target = "_blank";
+  whatsapp.rel = "noopener noreferrer";
+  whatsapp.textContent = "WhatsApp";
+  whatsapp.className = "portal-link";
+  actions.append(call, sms, whatsapp);
+  element.append(text, actions);
+}
+
+const ADMIN_PENDING_KEY = "eamwifi_admin_pending_ids_v1";
+let adminPendingPollTimer = null;
+let adminNotificationPrimed = false;
+
+function updateAdminPendingNotifications(accounts) {
+  const pending = (Array.isArray(accounts) ? accounts : []).filter(account => account.status !== "active");
+  const ids = pending.map(account => String(account.id)).filter(Boolean);
+  const current = new Set(ids);
+  let previous = [];
+  try { previous = JSON.parse(localStorage.getItem(ADMIN_PENDING_KEY) || "[]"); } catch { previous = []; }
+  if (!adminNotificationPrimed) {
+    if (!localStorage.getItem(ADMIN_PENDING_KEY)) localStorage.setItem(ADMIN_PENDING_KEY, JSON.stringify(ids));
+    adminNotificationPrimed = true;
+  } else {
+    const previousSet = new Set(previous);
+    const fresh = pending.filter(account => !previousSet.has(String(account.id)));
+    if (fresh.length && "Notification" in window && Notification.permission === "granted") {
+      fresh.forEach(account => {
+        const notice = new Notification("EAM-WIFI: Usajili mpya unasubiri idhini", {
+          body: (account.name || "Biashara mpya") + " · " + (account.contact_phone || "Hakuna simu") + " — fungua Dashboard kuidhinisha.",
+          tag: "eamwifi-registration-" + account.id
+        });
+        notice.onclick = () => { window.focus(); notice.close(); };
+      });
+    }
+    localStorage.setItem(ADMIN_PENDING_KEY, JSON.stringify([...new Set([...previous, ...ids])]));
+  }
+  const count = document.getElementById("admin-pending-count");
+  if (count) count.textContent = String(pending.length);
+  const status = document.getElementById("admin-notification-status");
+  if (status && "Notification" in window) {
+    status.textContent = Notification.permission === "granted"
+      ? "Arifa za simu zimewashwa. Acha dashboard/browser ikiwa wazi ili ipokee taarifa."
+      : Notification.permission === "denied"
+        ? "Arifa zimezuiwa kwenye browser. Ruhusu notifications kwenye mipangilio ya browser."
+        : "Washa ruhusa ya notifications ili upokee taarifa mpya kwenye simu.";
+  }
+}
+
+window.enableAdminPhoneNotifications = async function enableAdminPhoneNotifications() {
+  const status = document.getElementById("admin-notification-status");
+  if (!("Notification" in window)) {
+    if (status) status.textContent = "Browser hii haitumii notifications. Tumia Chrome ya simu.";
+    return;
+  }
+  const permission = await Notification.requestPermission();
+  if (status) status.textContent = permission === "granted"
+    ? "Arifa zimewashwa. Dashboard/browser inahitaji kubaki wazi ili ipokee taarifa."
+    : "Hukuruhusu notifications. Badilisha ruhusa kwenye mipangilio ya browser.";
+  if (permission === "granted") {
+    const button = document.getElementById("enable-admin-notifications");
+    if (button) button.textContent = "Arifa zimewashwa · Notifications enabled";
+  }
+};
+
+function startAdminPendingPolling() {
+  if (adminPendingPollTimer) clearInterval(adminPendingPollTimer);
+  adminPendingPollTimer = setInterval(async () => {
+    if (!session?.access_token || !document.getElementById("platform-admin") || document.getElementById("platform-admin").classList.contains("hidden")) return;
+    try { await loadPlatformAccounts(); } catch { /* Keep the dashboard usable if polling is temporarily offline. */ }
+  }, 30000);
 }
 
 async function refreshRouterPaymentNotices() {
@@ -332,7 +409,10 @@ async function loadWorkspace() {
   $("business-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("onboarding-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
-  if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformHealth(), loadPlatformAccounts(), loadPlatformRouters(), loadSupportInbox()]); }
+  if (isPlatformAdmin) {
+    await Promise.all([loadPlatformStats(), loadPlatformHealth(), loadPlatformAccounts(), loadPlatformRouters(), loadSupportInbox()]);
+    startAdminPendingPolling();
+  }
   await loadMySupportMessages();
   if (!memberships.length) {
     $("dashboard").classList.add("hidden");
@@ -660,6 +740,7 @@ async function loadPlatformAccounts() {
   host.textContent = "Loading business accounts…";
   try {
     const accounts = await api("/api/platform/admin/accounts");
+    updateAdminPendingNotifications(accounts);
     host.replaceChildren();
     if (!accounts.length) { host.textContent = "No business registrations yet."; return; }
     accounts.forEach((account) => {
@@ -1127,6 +1208,7 @@ $("auth-form").addEventListener("submit", async (event) => {
 
 async function signOut() {
   if (routerPaymentRefreshTimer) { clearInterval(routerPaymentRefreshTimer); routerPaymentRefreshTimer = null; }
+  if (adminPendingPollTimer) { clearInterval(adminPendingPollTimer); adminPendingPollTimer = null; }
   try {
     if (session?.access_token) await api("/api/auth/logout", { method: "POST" });
   } catch {
