@@ -113,7 +113,7 @@ async function handleApi(request, env) {
   }
 
   if (path === "/api/auth/mfa/factors" && request.method === "GET") {
-    return proxyAuthenticatedAuth(request, env, "/auth/v1/factors");
+    return proxyAuthenticatedAuth(request, env, "/auth/v1/user");
   }
   if (path === "/api/auth/mfa/enroll" && request.method === "POST") {
     let input;
