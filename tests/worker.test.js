@@ -93,3 +93,36 @@ test("business payment settings endpoint requires authentication", async () => {
 test("Super Admin health endpoint requires authentication", async () => { const response = await worker.fetch(new Request("https://example.test/api/platform/admin/health"), {}); assert.equal(response.status, 401); });
 
 test("router status endpoint requires authentication", async () => { const response = await worker.fetch(new Request("https://example.test/api/routers?organization_id=00000000-0000-0000-0000-000000000001"), {}); assert.equal(response.status, 401); });
+
+test("authenticated router lookup forwards the user's JWT and scopes the query to the requested organization", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl = "";
+  let capturedHeaders;
+  globalThis.fetch = async (url, options = {}) => {
+    capturedUrl = String(url);
+    capturedHeaders = new Headers(options.headers || {});
+    return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const organizationId = "00000000-0000-0000-0000-000000000001";
+    const userJwt = "user-session-jwt-test";
+    const response = await worker.fetch(new Request(
+      `https://example.test/api/routers?organization_id=${organizationId}`,
+      { headers: { authorization: `Bearer ${userJwt}` } }
+    ), {
+      SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
+      SUPABASE_SERVICE_ROLE_KEY: "must-not-be-used"
+    });
+    assert.equal(response.status, 200);
+    assert.equal(capturedHeaders.get("authorization"), `Bearer ${userJwt}`);
+    assert.equal(capturedHeaders.get("apikey"), "sb_publishable_test");
+    assert.equal(capturedHeaders.get("apikey"), "sb_publishable_test");
+    const upstreamUrl = new URL(capturedUrl);
+    assert.equal(upstreamUrl.pathname, "/rest/v1/network_devices");
+    assert.equal(upstreamUrl.searchParams.get("organization_id"), `eq.${organizationId}`);
+    assert.equal(upstreamUrl.searchParams.get("select"), "id,name,vendor,model,connection_status,last_seen_at,created_at");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
