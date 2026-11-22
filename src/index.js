@@ -127,7 +127,7 @@ async function handleApi(request, env) {
     try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
     const factorId = String(input.factor_id || "");
     if (!/^[0-9a-f-]{36}$/i.test(factorId)) return json({ error: "A valid MFA factor is required." }, 400);
-    return proxyAuthenticatedAuth(request, env, `/auth/v1/factors/${factorId}/challenge`, {});
+    return proxyAuthenticatedAuth(request, env, `/auth/v1/factors/${factorId}/challenge`, { factor_id: factorId });
   }
   if (path === "/api/auth/mfa/verify" && request.method === "POST") {
     let input;
