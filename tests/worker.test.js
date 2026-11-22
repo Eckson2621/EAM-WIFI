@@ -121,7 +121,7 @@ test("authenticated router lookup forwards the user's JWT and scopes the query t
     const upstreamUrl = new URL(capturedUrl);
     assert.equal(upstreamUrl.pathname, "/rest/v1/network_devices");
     assert.equal(upstreamUrl.searchParams.get("organization_id"), `eq.${organizationId}`);
-    assert.equal(upstreamUrl.searchParams.get("select"), "id,organization_id,site_id,name,vendor,model,connection_status,last_seen_at,created_at,site:hotspot_sites(id,name,slug),router_subscriptions(status,expires_at,monthly_price_tzs)");
+    assert.equal(upstreamUrl.searchParams.get("select"), "id,organization_id,site_id,name,vendor,model,connection_status,last_seen_at,created_at,site:hotspot_sites(id,name,slug),router_subscriptions(status,expires_at,monthly_price_tzs,trial_started_at,trial_expires_at)");
   } finally {
     globalThis.fetch = originalFetch;
   }
