@@ -569,74 +569,31 @@ async function loadPlatformAccounts() {
   try {
     const accounts = await api("/api/platform/admin/accounts");
     host.replaceChildren();
-    if (!accounts.length) {
-      host.textContent = "No business registrations yet.";
-      return;
-    }
+    if (!accounts.length) { host.textContent = "No business registrations yet."; return; }
     accounts.forEach((account) => {
-      const card = document.createElement("div");
-      card.className = "item";
+      const card = document.createElement("div"); card.className = "item";
       const info = document.createElement("div");
-      const name = document.createElement("strong");
-      name.textContent = account.name;
-      const rawSub = account.platform_subscriptions;
-      const sub = Array.isArray(rawSub) ? rawSub[0] : rawSub;
-      const state = sub?.status || account.status || "pending";
-      const expiry = sub?.expires_at ? ` · Expires ${new Date(sub.expires_at).toLocaleDateString()}` : "";
+      const name = document.createElement("strong"); name.textContent = account.name;
       const meta = document.createElement("small");
-      meta.textContent = `${account.contact_phone || "No phone"} · Business: ${account.status} · Subscription: ${state}${expiry}`;
-      info.append(name, meta);
-      const controls = document.createElement("div");
-      controls.className = "stack";
-      const method = document.createElement("select");
-      [["cash","Cash"],["mobile_money","Mobile money"],["bank_transfer","Bank transfer"],["other","Other"]].forEach(([value,label]) => {
-        const option = document.createElement("option");
-        option.value = value; option.textContent = label; method.append(option);
-      });
-      const months = document.createElement("select");
-      months.setAttribute("aria-label", "Subscription duration in months");
-      [1,2,3,4,6,9,12,18,24,36,48,60].forEach((value) => {
-        const option = document.createElement("option");
-        option.value = String(value);
-        option.textContent = value === 1 ? "1 month" : value + " months";
-        months.append(option);
-      });
-      const reference = document.createElement("input");
-      reference.placeholder = "Payment reference (optional)";
-      reference.maxLength = 120;
-      const approve = document.createElement("button");
-      approve.type = "button";
-      approve.className = "secondary";
-      approve.textContent = "Confirm payment and grant selected period";
-      const message = document.createElement("small");
-      message.className = "muted";
-      approve.addEventListener("click", async () => {
-        const selectedMonths = Number(months.value);
-        const totalDue = 6000 * selectedMonths;
-        if (!window.confirm(`Confirm that ${account.name} has paid TSh ${totalDue.toLocaleString()} for ${selectedMonths} month(s)?`)) return;
-        approve.disabled = true;
-        message.textContent = "Approving subscription…";
+      meta.textContent = `${account.contact_phone || "No phone"} · Business status: ${account.status} · Router subscriptions are billed separately at TSh 6,000/month each.`;
+      info.append(name,meta);
+      const approve = document.createElement("button"); approve.type="button"; approve.className="secondary";
+      approve.textContent = account.status === "active" ? "Business approved" : "Approve business registration";
+      approve.disabled = account.status === "active";
+      const message = document.createElement("small"); message.className="muted";
+      approve.addEventListener("click",async()=>{
+        if(!window.confirm(`Approve ${account.name} as an EAM-WIFI business? Router subscriptions are charged separately at TSh 6,000/month per router.`)) return;
+        approve.disabled=true; message.textContent="Approving business…";
         try {
-          const result = await api("/api/platform/admin/approve", {
-            method: "POST",
-            body: JSON.stringify({ organization_id: account.id, payment_method: method.value, payment_reference: reference.value.trim() || null, months: selectedMonths })
-          });
-          message.textContent = `Approved. Access active until ${new Date(result.expires_at).toLocaleString()}.`;
-          await loadPlatformAccounts();
-        } catch (error) {
-          message.textContent = error.message;
-          approve.disabled = false;
-        }
+          await api("/api/platform/admin/approve",{method:"POST",body:JSON.stringify({organization_id:account.id,payment_method:"other",payment_reference:null,months:1})});
+          message.textContent="Business approved. Now review and approve payment for each router below.";
+          await loadPlatformAccounts(); await loadPlatformRouters();
+        } catch(error){message.textContent=error.message;approve.disabled=false;}
       });
-      controls.append(months, method, reference, approve, message);
-      card.append(info, controls);
-      host.append(card);
+      card.append(info,approve,message); host.append(card);
     });
-  } catch (error) {
-    host.textContent = error.message;
-  }
+  } catch(error) { host.textContent=error.message; }
 }
-
 async function loadPlatformRouters() {
   const host = $("platform-routers");
   if (!host) return;
