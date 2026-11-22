@@ -1,4 +1,8 @@
--- Enforce the per-router TSh 6,000 monthly subscription on router authentication,
+-- HISTORICAL / SUPERSEDED.
+-- Do not reapply this first-phase SQL. The current billing and trial implementation
+-- is maintained in database/router_trial_7500_billing.sql.
+
+-- Historical first-phase per-router TSh 7,500 subscription on router authentication,
 -- event processing and customer voucher redemption. Applied to Supabase project
 -- jvzjzmfnxytryzpylrqj (jvzjzmfnxytryzpylrqj).
 
