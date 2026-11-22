@@ -515,10 +515,11 @@ async function handleApi(request, env) {
     if (!["cash", "mobile_money", "bank_transfer", "other"].includes(paymentMethod)) {
       return json({ error: "Select a valid payment method." }, 400);
     }
-    const upstream = await supabaseFetch(env, "/rest/v1/rpc/issue_paid_wifi_voucher", {
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/issue_paid_wifi_voucher_for_router", {
       method: "POST",
       body: JSON.stringify({
         p_organization_id: organizationId,
+        p_device_id: deviceId,
         p_package_id: packageId,
         p_amount_paid: amountPaid,
         p_payment_method: paymentMethod,
