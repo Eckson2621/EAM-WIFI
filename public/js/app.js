@@ -304,8 +304,9 @@ async function loadWorkspace() {
     meta.textContent = `Role: ${membership.role} · Membership: ${membership.status} · Business: ${orgStatus}`;
     if (membership.role === "owner" || membership.role === "admin") notice.classList.add("hidden");
     info.append(name, meta);
+    let routers = [];
     try {
-      const routers = await api(`/api/routers?organization_id=${encodeURIComponent(membership.organization_id)}`);
+      routers = await api(`/api/routers?organization_id=${encodeURIComponent(membership.organization_id)}`);
       const routerInfo = document.createElement("small");
       if (!routers.length) {
         routerInfo.textContent = "Router: not registered";
@@ -374,14 +375,22 @@ async function loadWorkspace() {
       info.append(routerInfo);
     }
     if (membership.role === "owner" || membership.role === "admin") {
-      const portalLink = document.createElement("a");
-      portalLink.href = `/portal?site=${encodeURIComponent(membership.organization?.slug || "")}`;
-      portalLink.target = "_blank";
-      portalLink.rel = "noopener";
-      portalLink.textContent = "Open customer Wi-Fi portal";
-      portalLink.className = "portal-link";
-      if (!membership.organization?.slug) portalLink.hidden = true;
-      info.append(portalLink);
+      const portalLinks = document.createElement("div"); portalLinks.className = "stack";
+      routers.forEach((router) => {
+        const raw = router.site; const site = Array.isArray(raw) ? raw[0] : raw;
+        if (!site?.slug) return;
+        const portalLink = document.createElement("a");
+        portalLink.href = `/portal?site=${encodeURIComponent(site.slug)}`;
+        portalLink.target = "_blank"; portalLink.rel = "noopener";
+        portalLink.textContent = `Open customer Wi-Fi portal · ${site.name || router.name || "Router"}`;
+        portalLink.className = "portal-link"; portalLinks.append(portalLink);
+      });
+      if (!portalLinks.childElementCount && membership.organization?.slug) {
+        const portalLink = document.createElement("a"); portalLink.href = `/portal?site=${encodeURIComponent(membership.organization.slug)}`;
+        portalLink.target = "_blank"; portalLink.rel = "noopener"; portalLink.textContent = "Open customer Wi-Fi portal";
+        portalLink.className = "portal-link"; portalLinks.append(portalLink);
+      }
+      info.append(portalLinks);
     }
     if (membership.role === "owner" || membership.role === "admin") {
       const pairButton = document.createElement("button");
