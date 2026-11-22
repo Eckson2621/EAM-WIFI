@@ -135,7 +135,7 @@ async function handleApi(request, env) {
     const factorId = String(input.factor_id || "");
     const challengeId = String(input.challenge_id || "");
     const code = String(input.code || "");
-    if (!/^[0-9a-f-]{36}$/i.test(factorId) || !/^[0-9a-f-]{36}$/i.test(challengeId) || !/^\\d{6}$/.test(code)) {
+    if (!/^[0-9a-f-]{36}$/i.test(factorId) || !/^[0-9a-f-]{36}$/i.test(challengeId) || !/^\d{6}$/.test(code)) {
       return json({ error: "Enter a valid six-digit authenticator code." }, 400);
     }
     return proxyAuthenticatedAuth(request, env, `/auth/v1/factors/${factorId}/verify`, {
