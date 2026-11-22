@@ -178,7 +178,7 @@ async function handleApi(request, env) {
     const organizationId = String(url.searchParams.get("organization_id") || "");
     if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "A valid organization_id is required." }, 400);
     const query = new URLSearchParams({
-      select: "id,organization_id,site_id,name,vendor,model,connection_status,last_seen_at,created_at,site:hotspot_sites(id,name,slug),router_subscriptions(status,expires_at,monthly_price_tzs)",
+      select: "id,organization_id,site_id,name,vendor,model,connection_status,last_seen_at,created_at,site:hotspot_sites(id,name,slug),router_subscriptions(status,expires_at,monthly_price_tzs,trial_started_at,trial_expires_at)",
       organization_id: `eq.${organizationId}`,
       order: "created_at.desc"
     });
