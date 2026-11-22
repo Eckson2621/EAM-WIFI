@@ -1,6 +1,15 @@
 (() => {
   const translations = {
     "Wi-Fi Hotspot Management":"Usimamizi wa Hotspot za Wi-Fi",
+    "Wi-Fi access":"Upatikanaji wa Wi-Fi",
+    "Choose a package, pay the business using its displayed payment number, receive a voucher from the owner, and enter it below. The router signs you in automatically when the hotspot redirects you here.":"Chagua kifurushi, lipa biashara kwa namba iliyoonyeshwa, pokea vocha kutoka kwa mmiliki, kisha iingize hapa chini. Router itakuingiza moja kwa moja hotspot itakapokuelekeza hapa.",
+    "Loading business contact…":"Inapakia mawasiliano ya biashara…",
+    "Available packages":"Vifurushi vinavyopatikana",
+    "Loading packages…":"Inapakia vifurushi…",
+    "Enter your voucher":"Ingiza vocha yako",
+    "Voucher code":"Namba ya vocha",
+    "Verify voucher":"Hakiki vocha",
+    "Powered by EAM-WIFI · EAM VENTURES":"Inaendeshwa na EAM-WIFI · EAM VENTURES",
     "Checking service…":"Inakagua huduma…",
     "Help / Msaada":"Msaada",
     "Manage your Wi-Fi business from one place.":"Simamia biashara yako ya Wi-Fi sehemu moja.",
