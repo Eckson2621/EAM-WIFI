@@ -393,13 +393,28 @@ async function loadWorkspace() {
       info.append(portalLinks);
     }
     if (membership.role === "owner" || membership.role === "admin") {
+      const pairRouterSelect = document.createElement("select");
+      pairRouterSelect.setAttribute("aria-label", "Choose the MikroTik router to pair");
+      const pairPrompt = document.createElement("option"); pairPrompt.value = ""; pairPrompt.textContent = "Choose MikroTik router to connect";
+      pairRouterSelect.append(pairPrompt);
+      routers.filter((router) => String(router.vendor || "").toLowerCase() === "mikrotik").forEach((router) => {
+        const raw = router.site; const site = Array.isArray(raw) ? raw[0] : raw;
+        const option = document.createElement("option"); option.value = router.id;
+        option.textContent = `${router.name || "MikroTik"} · ${site?.name || "Hotspot"}`; pairRouterSelect.append(option);
+      });
       const pairButton = document.createElement("button");
       pairButton.type = "button";
       pairButton.className = "secondary";
-      pairButton.textContent = "Connect MikroTik router · Unganisha router";
+      pairButton.textContent = "Connect selected MikroTik router · Unganisha router";
+      pairButton.disabled = pairRouterSelect.options.length < 2;
       const setupPanel = document.createElement("div");
       setupPanel.className = "form-note hidden";
       pairButton.addEventListener("click", async () => {
+        if (!pairRouterSelect.value) {
+          setupPanel.classList.remove("hidden");
+          setupPanel.textContent = "Choose the MikroTik router you want to connect first.";
+          return;
+        }
         pairButton.disabled = true;
         pairButton.textContent = "Preparing secure pairing…";
         setupPanel.classList.remove("hidden");
@@ -407,7 +422,7 @@ async function loadWorkspace() {
         try {
           const pairing = await api("/api/router/pair", {
             method: "POST",
-            body: JSON.stringify({ organization_id: membership.organization_id })
+            body: JSON.stringify({ device_id: pairRouterSelect.value })
           });
           if (!pairing.installer_script) throw new Error("The configured router installer was not returned.");
           const installerBlob = new Blob([pairing.installer_script], { type: "text/plain" });
@@ -470,7 +485,7 @@ window.location.replace(portal.toString());
           pairButton.textContent = "Retry router pairing";
         } finally { pairButton.disabled = false; }
       });
-      card.append(pairButton, setupPanel);
+      card.append(pairRouterSelect, pairButton, setupPanel);
     }
 
     const button = document.createElement("button");
