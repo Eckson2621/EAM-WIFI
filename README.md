@@ -42,7 +42,7 @@ The GitHub Actions workflow deploys the existing Worker named `wifi` using `wran
 2. Give it **Workers → Editor** permission scoped to the existing Worker named `wifi`, or to the Workers product if that resource scope is unavailable. If `wifi` does not yet exist in the selected account, creating it requires Workers product-level **Admin**.
 3. Make sure the token belongs to the Cloudflare account whose ID is `03295d1fe8b8e4fef8ce9c2cb32a2534`.
 4. In GitHub, open **Settings → Secrets and variables → Actions** for this repository and replace the value of `WIFI_BUILD_TOKEN` with the new token. Do not paste the token into chat, source files, commits, screenshots or support messages.
-5. Push to `main` or manually run the workflow from the Actions tab. It runs `npm test` before deployment.
+5. Commit and push a change to `main`. The production workflow is automatic-only (push to `main`); it runs `npm test` before deploying. There is no manual deployment trigger.
 
 The workflow already contains the account ID; a separate `CLOUDFLARE_ACCOUNT_ID` GitHub secret is not used. A token merely existing in GitHub is not proof that it has the correct account or permissions. A live deployment is not confirmed until the workflow succeeds.
 
