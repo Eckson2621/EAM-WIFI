@@ -187,3 +187,44 @@ test("MFA challenge rejects malformed factor identifiers before contacting Supab
     assert.equal(called, false);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+
+test("MFA verification rejects non-six-digit codes before contacting Supabase", async () => {
+  const originalFetch = globalThis.fetch;
+  let called = false;
+  globalThis.fetch = async () => { called = true; return new Response("{}", { status: 200 }); };
+  try {
+    const response = await worker.fetch(new Request("https://example.test/api/auth/mfa/verify", {
+      method: "POST", headers: { authorization: "Bearer user-session-test", "content-type": "application/json" },
+      body: JSON.stringify({
+        factor_id: "00000000-0000-0000-0000-000000000001",
+        challenge_id: "00000000-0000-0000-0000-000000000002",
+        code: "12AB56"
+      })
+    }), { SUPABASE_URL: "https://example.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test" });
+    assert.equal(response.status, 400);
+    assert.equal(called, false);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("MFA factor lookup forwards the signed-in user's JWT to Supabase Auth", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl = "";
+  let capturedAuthorization = "";
+  globalThis.fetch = async (url, options = {}) => {
+    capturedUrl = String(url);
+    capturedAuthorization = new Headers(options.headers || {}).get("authorization");
+    return new Response(JSON.stringify({ id: "user-1", factors: [] }), {
+      status: 200, headers: { "content-type": "application/json" }
+    });
+  };
+  try {
+    const token = "signed-in-user-jwt";
+    const response = await worker.fetch(new Request("https://example.test/api/auth/mfa/factors", {
+      headers: { authorization: "Bearer " + token }
+    }), { SUPABASE_URL: "https://example.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test" });
+    assert.equal(response.status, 200);
+    assert.equal(new URL(capturedUrl).pathname, "/auth/v1/user");
+    assert.equal(capturedAuthorization, "Bearer " + token);
+  } finally { globalThis.fetch = originalFetch; }
+});
