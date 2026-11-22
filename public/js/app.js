@@ -66,7 +66,6 @@ async function sendSupportMessage(event) {
   $("support-feedback").textContent = "Sending your message securely…";
   try {
     const memberships = await api("/api/organizations");
-  startRouterPaymentRefresh();
     const active = memberships.find((m) => m.status === "active" && m.role === "owner");
     await api("/api/support/messages", { method: "POST", body: JSON.stringify({
       category: $("support-category").value,
@@ -313,6 +312,7 @@ function startRouterPaymentRefresh() {
 async function loadWorkspace() {
   const user = await api("/api/auth/user");
   const memberships = await api("/api/organizations");
+  startRouterPaymentRefresh();
   if (window.EAMChat) await window.EAMChat.start(user, memberships);
   const profile = user.user_metadata || {};
   const prefill = (name, value) => {
@@ -1126,6 +1126,7 @@ $("auth-form").addEventListener("submit", async (event) => {
 });
 
 async function signOut() {
+  if (routerPaymentRefreshTimer) { clearInterval(routerPaymentRefreshTimer); routerPaymentRefreshTimer = null; }
   try {
     if (session?.access_token) await api("/api/auth/logout", { method: "POST" });
   } catch {
