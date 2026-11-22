@@ -39,5 +39,22 @@ jobs:
             echo "::error::CLOUDFLARE_ACCOUNT_ID is missing."
             exit 1
           fi
-      - name: Deploy wifi Worker and static assets
-        run: npx wrangler deploy --name wifi
+      - name: Deploy wifi Worker and static assets (retry on failure)
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            echo "Deployment attempt ${attempt}/3"
+            if npx wrangler deploy --name wifi; then
+              echo "Deployment succeeded on attempt ${attempt}."
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              delay=$((attempt * 15))
+              echo "Deployment failed. Retrying in ${delay} seconds..."
+              sleep "$delay"
+            fi
+          done
+
+          echo "::error::Deployment failed after 3 attempts."
+          exit 1
