@@ -1012,7 +1012,7 @@ async function appendVoucherIssueControls(card, item, organizationId) {
     if (!available.length) {
       const option = document.createElement("option"); option.value = ""; option.textContent = "No router with an active subscription";
       routerSelect.append(option);
-      message.textContent = "Voucher issuance is locked until Super Admin approves payment for at least one router (TSh 6,000/month per router).";
+      message.textContent = "Voucher issuance is locked for this router until the Super Admin approves its TSh 7,500 monthly payment.";
     } else {
       const prompt = document.createElement("option"); prompt.value = ""; prompt.textContent = "Choose router for this voucher"; routerSelect.append(prompt);
       available.forEach((router) => {
@@ -1072,7 +1072,7 @@ $("business-form").addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify(values)
     });
-    setPlatformCallNotice($("business-message"), "Business registration submitted. Each router is billed separately at TSh 6,000 per month and must be approved by the Super Admin. The router is registered but not connected yet.");
+    setPlatformCallNotice($("business-message"), "Business registration is free and submitted. Connect the router to start its 5-minute test. After the test, pay TSh 7,500 for this router and contact the Super Admin for approval.");
     $("business-message").style.color = "#26734d";
     event.currentTarget.reset();
     await loadWorkspace();
