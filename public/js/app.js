@@ -229,6 +229,8 @@ function setMode(nextMode) {
   $("submit-auth").textContent = mode === "signin" ? "Sign in" : "Create account";
   $("password").autocomplete = mode === "signin" ? "current-password" : "new-password";
   $("password").minLength = mode === "signup" ? 12 : 8;
+  $("password").placeholder = mode === "signup" ? "12+ characters: uppercase, lowercase, number and symbol" : "Password";
+
   $("password").title = mode === "signup"
     ? "At least 12 characters with uppercase, lowercase, a number and a symbol."
     : "Enter your account password.";
