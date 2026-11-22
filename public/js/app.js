@@ -341,7 +341,7 @@ function updateAdminPendingNotifications(accounts) {
   }
 }
 
-window.enableAdminPhoneNotifications = async function enableAdminPhoneNotifications() {
+async function enableAdminPhoneNotifications() {
   const status = document.getElementById("admin-notification-status");
   if (!("Notification" in window)) {
     if (status) status.textContent = "Browser hii haitumii notifications. Tumia Chrome ya simu.";
@@ -356,6 +356,8 @@ window.enableAdminPhoneNotifications = async function enableAdminPhoneNotificati
     if (button) button.textContent = "Arifa zimewashwa · Notifications enabled";
   }
 };
+
+$("enable-admin-notifications").addEventListener("click", enableAdminPhoneNotifications);
 
 function startAdminPendingPolling() {
   if (adminPendingPollTimer) clearInterval(adminPendingPollTimer);
