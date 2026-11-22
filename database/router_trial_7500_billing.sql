@@ -225,28 +225,81 @@ BEGIN
 END;
 $function$;
 
--- Keep voucher redemption independent of legacy organization-wide platform
--- subscriptions. A router may accept vouchers during its five-minute trial or
--- its paid period; the paid period is still enforced per router.
+-- Voucher redemption is scoped to the exact hotspot site and router ID assigned
+-- to the voucher. It also removes the legacy organization-wide billing gate.
+CREATE OR REPLACE FUNCTION private.redeem_wifi_voucher(p_slug text,p_code text,p_mac_address text)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
+AS $function$
+DECLARE
+ v_org public.organizations%rowtype; v_voucher public.vouchers%rowtype; v_package public.wifi_packages%rowtype;
+ v_customer_id uuid; v_session_id uuid; v_device_id uuid; v_site_id uuid;
+ v_username text; v_attempts integer; v_mac macaddr; v_expires_at timestamptz;
+BEGIN
+ IF coalesce(p_slug,'') !~ '^[a-z0-9-]{3,80}$' THEN RETURN jsonb_build_object('ok',false,'error','Wi-Fi site not found.'); END IF;
+ IF coalesce(p_code,'') !~ '^EW[A-F0-9]{16,24}$' THEN RETURN jsonb_build_object('ok',false,'error','Voucher code is not valid.'); END IF;
+ IF coalesce(p_mac_address,'') !~* '^([0-9a-f]{2}:){5}[0-9a-f]{2}$' THEN RETURN jsonb_build_object('ok',false,'error','Router client MAC address is required.'); END IF;
+ v_mac:=lower(p_mac_address)::macaddr;
+ INSERT INTO public.voucher_redemption_limits(mac_address,attempts,window_started_at) VALUES(v_mac,1,now())
+ ON CONFLICT(mac_address) DO UPDATE SET
+  attempts=CASE WHEN public.voucher_redemption_limits.window_started_at<now()-interval '10 minutes' THEN 1 ELSE public.voucher_redemption_limits.attempts+1 END,
+  window_started_at=CASE WHEN public.voucher_redemption_limits.window_started_at<now()-interval '10 minutes' THEN now() ELSE public.voucher_redemption_limits.window_started_at END,
+  updated_at=now() RETURNING attempts INTO v_attempts;
+ IF v_attempts>5 THEN RETURN jsonb_build_object('ok',false,'error','Too many attempts. Wait 10 minutes and try again.'); END IF;
+ SELECT o.* INTO v_org FROM public.organizations o JOIN public.hotspot_sites hs ON hs.organization_id=o.id
+ WHERE hs.slug=p_slug AND hs.status='active' AND o.status='active' FOR SHARE OF o;
+ IF NOT FOUND THEN RETURN jsonb_build_object('ok',false,'error','This Wi-Fi service is temporarily unavailable.'); END IF;
+ SELECT hs.id INTO v_site_id FROM public.hotspot_sites hs
+ WHERE hs.organization_id=v_org.id AND hs.slug=p_slug AND hs.status='active';
+ IF v_site_id IS NULL THEN RETURN jsonb_build_object('ok',false,'error','Wi-Fi site not found.'); END IF;
+ SELECT * INTO v_voucher FROM public.vouchers v
+ WHERE v.organization_id=v_org.id AND v.code_hash=md5(upper(p_code)) FOR UPDATE;
+ IF NOT FOUND OR v_voucher.status<>'unused' OR (v_voucher.expires_at IS NOT NULL AND v_voucher.expires_at<=now()) THEN
+  RETURN jsonb_build_object('ok',false,'error','Voucher is invalid, expired, or already used.');
+ END IF;
+ IF v_voucher.device_id IS NULL THEN RETURN jsonb_build_object('ok',false,'error','This voucher is not assigned to a router. Contact the Wi-Fi business.'); END IF;
+ v_device_id:=v_voucher.device_id;
+ IF NOT EXISTS(SELECT 1 FROM public.network_devices d JOIN public.router_subscriptions rs ON rs.device_id=d.id
+  WHERE d.id=v_device_id AND d.organization_id=v_org.id AND d.site_id=v_site_id AND d.vendor='mikrotik'
+   AND d.connection_status='online' AND d.last_seen_at>now()-interval '2 minutes'
+   AND ((rs.status='active' AND rs.expires_at>now()) OR (rs.status<>'active' AND rs.trial_expires_at>now()))) THEN
+  RETURN jsonb_build_object('ok',false,'error','The router assigned to this voucher is offline or its trial/subscription has expired.');
+ END IF;
+ SELECT * INTO v_package FROM public.wifi_packages p
+ WHERE p.id=v_voucher.package_id AND p.organization_id=v_org.id AND p.is_active=true;
+ IF NOT FOUND THEN RETURN jsonb_build_object('ok',false,'error','This voucher package is no longer available.'); END IF;
+ INSERT INTO public.wifi_customers(organization_id,mac_address,status) VALUES(v_org.id,v_mac,'active')
+ ON CONFLICT(organization_id,mac_address) WHERE mac_address IS NOT NULL
+ DO UPDATE SET status='active',updated_at=now() RETURNING id INTO v_customer_id;
+ v_username:='EW'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,16));
+ v_expires_at:=CASE WHEN v_package.session_mode='wall_clock' THEN now()+make_interval(secs=>v_package.duration_seconds)
+  WHEN v_package.validity_seconds IS NOT NULL THEN now()+make_interval(secs=>v_package.validity_seconds) ELSE NULL END;
+ INSERT INTO public.access_sessions(organization_id,customer_id,package_id,device_id,username,session_status,remaining_seconds,expires_at,mac_address)
+ VALUES(v_org.id,v_customer_id,v_package.id,v_device_id,v_username,'queued',v_package.duration_seconds,v_expires_at,v_mac)
+ RETURNING id INTO v_session_id;
+ UPDATE public.vouchers SET status='redeemed',redeemed_by_customer_id=v_customer_id,redeemed_at=now()
+ WHERE id=v_voucher.id AND status='unused';
+ IF NOT FOUND THEN RETURN jsonb_build_object('ok',false,'error','Voucher has already been used.'); END IF;
+ INSERT INTO public.router_events(organization_id,device_id,session_id,event_type,event_payload)
+ VALUES(v_org.id,v_device_id,v_session_id,'voucher_redemption_requested',
+  jsonb_build_object('username',v_username,'password',v_username,'mac_address',v_mac::text,
+   'duration_seconds',v_package.duration_seconds,'validity_seconds',v_package.validity_seconds,
+   'valid_until',v_expires_at,'session_mode',v_package.session_mode,'data_limit_bytes',v_package.data_limit_bytes,
+   'speed_down_kbps',v_package.speed_down_kbps,'speed_up_kbps',v_package.speed_up_kbps,
+   'max_devices',v_package.max_devices,'package_name',v_package.name));
+ RETURN jsonb_build_object('ok',true,'session_id',v_session_id,'status','queued','username',v_username,
+  'password',v_username,'valid_until',v_expires_at,'message','Voucher accepted. Connecting you to the Wi-Fi network now.');
+END;
+$function$;
+
 DO $do$
 DECLARE v_definition text;
 BEGIN
- SELECT pg_get_functiondef('private.redeem_wifi_voucher(text,text,text)'::regprocedure) INTO v_definition;
- v_definition:=replace(v_definition,
-  'JOIN public.platform_subscriptions s ON s.organization_id=o.id AND s.status=''active'' AND s.expires_at>now()' || chr(10),
-  '');
- v_definition:=replace(v_definition,
-  'AND rs.status=''active'' AND rs.expires_at>now()',
-  'AND ((rs.status=''active'' AND rs.expires_at>now()) OR (rs.status<>''active'' AND rs.trial_expires_at>now()))');
- v_definition:=replace(v_definition,
-  'No connected MikroTik router with an active monthly subscription is available. Please contact the Wi-Fi business.',
-  'No connected MikroTik router with an active subscription or current trial is available. Please contact the Wi-Fi business.');
- IF position('platform_subscriptions' in v_definition)>0 THEN
-  RAISE EXCEPTION 'Legacy business billing gate remains in voucher redemption';
- END IF;
+ SELECT pg_get_functiondef('public.issue_paid_wifi_voucher_for_router(uuid,uuid,uuid,bigint,text,text,text)'::regprocedure) INTO v_definition;
+ v_definition:=replace(v_definition,'Monthly fee is TSh 6,000.','Monthly fee is TSh 7,500.');
  EXECUTE v_definition;
 END
 $do$;
+REVOKE EXECUTE ON FUNCTION public.issue_paid_wifi_voucher(uuid,uuid,bigint,text,text,text) FROM PUBLIC,anon,authenticated;
 
 -- Business registration remains free; this is an admin-only approval of the
 -- organization account. The organization-wide subscription is suspended and
