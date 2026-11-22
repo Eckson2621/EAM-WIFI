@@ -62,10 +62,12 @@ A private router address such as `192.168.88.1` cannot be reached directly from 
 - The router password/API secret is deliberately not collected or stored by the registration form.
 - RLS is enabled on all 24 public application tables. Direct anonymous table privileges are revoked; public captive-portal and router-auth RPCs are intentional anonymous entry points.
 - Admin-only `SECURITY DEFINER` RPCs enforce the authenticated Super Admin identity in their function bodies. The private schema has no client table policies, so direct reads are denied; trusted definer functions perform the required internal lookups.
-- Security Advisor currently reports leaked-password protection disabled in Supabase Auth. Enable it in **Authentication → Settings → Password Security** before production: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
-- The latest security audit found all 24 public tables have RLS enabled and no public table missing RLS. It also found overlapping SELECT policies on `network_devices`; this is a low-priority policy-efficiency cleanup, not evidence of an access-control bypass.
-- The automated test suite currently focuses mainly on unauthenticated-request rejection and malformed public input. It is not a substitute for authenticated cross-organization authorization tests.
-- Real authenticated cross-organization tests, browser-based chat attachment/realtime tests, and router pairing tests are still required before production use.
+- Super Admin access now requires a verified TOTP authenticator session (`aal2`). The database checks this in `private.is_platform_admin()`; the dashboard is held behind an enrollment/challenge screen until verification succeeds. Privileged router RPC implementations live in the non-exposed `private` schema with public `SECURITY INVOKER` wrappers.
+- New account passwords are validated server-side: at least 12 characters, with uppercase, lowercase, a number and a symbol. This is not the same as checking against leaked passwords.
+- Router subscription price validation is aligned to the current TSh 7,500/month price; the former database check incorrectly required TSh 6,000 and could block new router registration.
+- Security Advisor no longer reports exposed public `SECURITY DEFINER` admin RPCs. It still reports leaked-password protection disabled in Supabase Auth. Supabase documents this feature as Pro Plan and above; the current project remains on its existing plan. Do not claim leaked-password checks are active until the plan/settings are upgraded: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- All 24 public application tables have RLS enabled. A temporary two-business test (rolled back after execution) confirmed cross-business reads are isolated for organizations, routers, packages and router subscriptions; cross-business package insertion and approval-status changes were rejected.
+- Automated Worker tests now cover MFA endpoint authentication, malformed factor/code rejection, weak-password rejection, and the existing public/protected API guards. Physical MikroTik pairing, captive-portal redirects, session expiry and real internet access still require hardware testing before production.
 
 ## Repository layout
 
