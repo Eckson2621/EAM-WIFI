@@ -178,11 +178,31 @@ async function handleApi(request, env) {
     const organizationId = String(url.searchParams.get("organization_id") || "");
     if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "A valid organization_id is required." }, 400);
     const query = new URLSearchParams({
-      select: "id,name,vendor,model,connection_status,last_seen_at,created_at",
+      select: "id,organization_id,site_id,name,vendor,model,connection_status,last_seen_at,created_at,site:hotspot_sites(id,name,slug),router_subscriptions(status,expires_at,monthly_price_tzs)",
       organization_id: `eq.${organizationId}`,
       order: "created_at.desc"
     });
     const upstream = await supabaseFetch(env, `/rest/v1/network_devices?${query}`, { method: "GET" }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
+  if (path === "/api/routers" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const organizationId = String(input.organization_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "A valid organization_id is required." }, 400);
+    const payload = {
+      p_organization_id: organizationId,
+      p_site_name: String(input.site_name || "").trim(),
+      p_site_address: String(input.site_address || "").trim() || null,
+      p_router_name: String(input.router_name || "").trim(),
+      p_router_vendor: String(input.router_vendor || "mikrotik"),
+      p_router_model: String(input.router_model || "").trim() || null,
+      p_integration_type: String(input.integration_type || "mikrotik_hotspot")
+    };
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/create_additional_router", {
+      method: "POST", body: JSON.stringify(payload)
+    }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
 
@@ -401,6 +421,30 @@ async function handleApi(request, env) {
   if (path === "/api/platform/admin/health" && request.method === "GET") {
     const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_system_health", {
       method: "POST", body: "{}"
+    }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
+  if (path === "/api/platform/admin/routers" && request.method === "GET") {
+    const query = new URLSearchParams({
+      select: "id,organization_id,name,vendor,model,connection_status,last_seen_at,created_at,organization:organizations(name,contact_phone),site:hotspot_sites(name,slug),router_subscriptions(status,expires_at,monthly_price_tzs)",
+      order: "created_at.desc"
+    });
+    const upstream = await supabaseFetch(env, `/rest/v1/network_devices?${query}`, { method: "GET" }, token);
+    return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
+  if (path === "/api/platform/admin/approve-router" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    if (!/^[0-9a-f-]{36}$/i.test(String(input.device_id || ""))) return json({ error: "A valid device_id is required." }, 400);
+    if (!["cash","mobile_money","bank_transfer","other"].includes(input.payment_method)) return json({ error: "Select a valid payment method." }, 400);
+    const months = Number(input.months || 1);
+    if (!Number.isInteger(months) || months < 1 || months > 60) return json({ error: "Subscription duration must be from 1 to 60 months." }, 400);
+    const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_approve_router_subscription", {
+      method: "POST",
+      body: JSON.stringify({ p_device_id: input.device_id, p_payment_method: input.payment_method,
+        p_payment_reference: input.payment_reference || null, p_months: months })
     }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
