@@ -550,8 +550,8 @@ async function loadPlatformHealth() {
       ["Customer sessions queued / active", number(s.sessions_queued) + " / " + number(s.sessions_active)],
       ["Sessions expired / blocked", number(s.sessions_expired) + " / " + number(s.sessions_blocked)],
       ["Vouchers unused / redeemed", number(s.vouchers_unused) + " / " + number(s.vouchers_redeemed)],
-      ["Subscriptions active / pending", number(s.subscriptions_active) + " / " + number(s.subscriptions_pending)],
-      ["Subscriptions expired", number(s.subscriptions_expired)],
+      ["Router subscriptions active / pending", number(s.subscriptions_active) + " / " + number(s.subscriptions_pending)],
+      ["Router subscriptions expired", number(s.subscriptions_expired)],
       ["New support messages", number(s.support_new)]
     ];
     host.replaceChildren();
