@@ -153,3 +153,37 @@ test("Super Admin router approval endpoint rejects unauthenticated requests", as
   }), {});
   assert.equal(response.status, 401);
 });
+
+
+test("signup rejects weak passwords before contacting Supabase", async () => {
+  const originalFetch = globalThis.fetch;
+  let called = false;
+  globalThis.fetch = async () => { called = true; return new Response("{}", { status: 200 }); };
+  try {
+    const response = await worker.fetch(new Request("https://example.test/api/auth/signup", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "test@example.com", password: "weakpass1" })
+    }), { SUPABASE_URL: "https://example.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test" });
+    assert.equal(response.status, 400);
+    assert.equal(called, false);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("MFA factor listing requires an authenticated session", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/auth/mfa/factors"), {});
+  assert.equal(response.status, 401);
+});
+
+test("MFA challenge rejects malformed factor identifiers before contacting Supabase", async () => {
+  const originalFetch = globalThis.fetch;
+  let called = false;
+  globalThis.fetch = async () => { called = true; return new Response("{}", { status: 200 }); };
+  try {
+    const response = await worker.fetch(new Request("https://example.test/api/auth/mfa/challenge", {
+      method: "POST", headers: { authorization: "Bearer user-session-test", "content-type": "application/json" },
+      body: JSON.stringify({ factor_id: "bad" })
+    }), { SUPABASE_URL: "https://example.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test" });
+    assert.equal(response.status, 400);
+    assert.equal(called, false);
+  } finally { globalThis.fetch = originalFetch; }
+});
