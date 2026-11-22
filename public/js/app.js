@@ -302,23 +302,7 @@ async function loadWorkspace() {
     const meta = document.createElement("small");
     const orgStatus = membership.organization?.status || "unknown";
     meta.textContent = `Role: ${membership.role} · Membership: ${membership.status} · Business: ${orgStatus}`;
-    if (membership.role === "owner" || membership.role === "admin") {
-      try {
-        const sub = await api(`/api/platform/subscription?organization_id=${encodeURIComponent(membership.organization_id)}`);
-        if (!sub.active) {
-          notice.classList.remove("hidden");
-          setPlatformCallNotice(notice, sub.status === "expired"
-            ? "Your EAM-WIFI subscription has expired. Monthly renewal is TSh 6,000. Call the platform administrator to confirm payment and reactivate your business."
-            : "Your business registration is waiting for payment approval. The EAM-WIFI platform subscription is TSh 6,000 per month. Call the platform administrator; access starts after payment is confirmed.");
-        } else {
-          notice.classList.remove("hidden");
-          notice.textContent = `Your EAM-WIFI subscription is active until ${new Date(sub.expires_at).toLocaleString()}.`;
-        }
-      } catch (error) {
-        notice.classList.remove("hidden");
-        notice.textContent = "Subscription status could not be checked. Please contact EAM-WIFI support before issuing vouchers.";
-      }
-    }
+    if (membership.role === "owner" || membership.role === "admin") notice.classList.add("hidden");
     info.append(name, meta);
     try {
       const routers = await api(`/api/routers?organization_id=${encodeURIComponent(membership.organization_id)}`);
@@ -927,9 +911,12 @@ async function loadPackages(organizationId, role = "operator") {
   }
 }
 
-function appendVoucherIssueControls(card, item, organizationId) {
+async function appendVoucherIssueControls(card, item, organizationId) {
   const voucherPanel = document.createElement("div");
   voucherPanel.className = "stack voucher-issue";
+  const routerSelect = document.createElement("select");
+  routerSelect.setAttribute("aria-label", "Select the paid router for this voucher");
+  const routerPrompt = document.createElement("option"); routerPrompt.value = ""; routerPrompt.textContent = "Loading paid routers…"; routerSelect.append(routerPrompt);
   const phone = document.createElement("input");
   phone.type = "tel"; phone.placeholder = "Customer phone (optional)";
   const amount = document.createElement("input");
@@ -948,10 +935,11 @@ function appendVoucherIssueControls(card, item, organizationId) {
   issue.addEventListener("click", async () => {
     const paid = Number(amount.value);
     if (!Number.isSafeInteger(paid) || paid !== Number(item.price_tzs)) { message.textContent = "Enter the exact package price received."; return; }
+    if (!routerSelect.value) { message.textContent = "Select a router with an active monthly subscription first."; return; }
     if (!window.confirm("Confirm full payment received? One voucher will be issued.")) return;
     issue.disabled = true; message.textContent = "Issuing voucher…";
     try {
-      const result = await api("/api/vouchers/issue-paid", { method: "POST", body: JSON.stringify({ organization_id: organizationId, package_id: item.id, amount_paid: paid, payment_method: method.value, customer_phone: phone.value.trim() || null, payment_reference: reference.value.trim() || null }) });
+      const result = await api("/api/vouchers/issue-paid", { method: "POST", body: JSON.stringify({ organization_id: organizationId, device_id: routerSelect.value, package_id: item.id, amount_paid: paid, payment_method: method.value, customer_phone: phone.value.trim() || null, payment_reference: reference.value.trim() || null }) });
       if (!result.code || !/^EW[A-F0-9]{24}$/.test(result.code)) throw new Error("No valid voucher code was returned. Contact support before retrying.");
       code.value = result.code; code.hidden = false; copy.hidden = false;
       message.textContent = "Payment recorded. Give this voucher to the customer.";
@@ -959,8 +947,34 @@ function appendVoucherIssueControls(card, item, organizationId) {
     } catch (error) { message.textContent = error.message; }
     finally { issue.disabled = false; }
   });
-  voucherPanel.append(phone, amount, method, reference, issue, message, code, copy);
+  voucherPanel.append(routerSelect, phone, amount, method, reference, issue, message, code, copy);
   card.append(voucherPanel);
+  issue.disabled = true;
+  try {
+    const routers = await api(`/api/routers?organization_id=${encodeURIComponent(organizationId)}`);
+    routerSelect.replaceChildren();
+    const available = routers.filter((router) => {
+      const raw = router.router_subscriptions; const sub = Array.isArray(raw) ? raw[0] : raw;
+      return sub?.status === "active" && sub.expires_at && new Date(sub.expires_at) > new Date();
+    });
+    if (!available.length) {
+      const option = document.createElement("option"); option.value = ""; option.textContent = "No router with an active subscription";
+      routerSelect.append(option);
+      message.textContent = "Voucher issuance is locked until Super Admin approves payment for at least one router (TSh 6,000/month per router).";
+    } else {
+      const prompt = document.createElement("option"); prompt.value = ""; prompt.textContent = "Choose router for this voucher"; routerSelect.append(prompt);
+      available.forEach((router) => {
+        const raw = router.site; const site = Array.isArray(raw) ? raw[0] : raw;
+        const option = document.createElement("option"); option.value = router.id;
+        option.textContent = `${router.name || "Router"} · ${site?.name || "Hotspot"}`; routerSelect.append(option);
+      });
+      issue.disabled = false;
+      message.textContent = "Select the router this voucher belongs to. It cannot be redeemed on another router.";
+    }
+  } catch (error) {
+    const option = document.createElement("option"); option.value = ""; option.textContent = "Could not load routers";
+    routerSelect.replaceChildren(option); message.textContent = error.message;
+  }
 }
 
 $("admin-open-business").addEventListener("click", () => {
@@ -1006,7 +1020,7 @@ $("business-form").addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify(values)
     });
-    setPlatformCallNotice($("business-message"), "Registration submitted. Call the EAM-WIFI platform administrator to discuss and confirm your TSh 6,000 monthly subscription. Your business remains locked until payment is approved. The router is registered but not connected yet.");
+    setPlatformCallNotice($("business-message"), "Business registration submitted. Each router is billed separately at TSh 6,000 per month and must be approved by the Super Admin. The router is registered but not connected yet.");
     $("business-message").style.color = "#26734d";
     event.currentTarget.reset();
     await loadWorkspace();
