@@ -228,3 +228,60 @@ test("MFA factor lookup forwards the signed-in user's JWT to Supabase Auth", asy
     assert.equal(capturedAuthorization, "Bearer " + token);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+
+test("MFA verify forwards a valid TOTP code and the user's bearer token", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl = "";
+  let capturedBody = "";
+  let capturedAuthorization = "";
+  globalThis.fetch = async (url, options = {}) => {
+    capturedUrl = String(url);
+    capturedBody = String(options.body || "");
+    capturedAuthorization = new Headers(options.headers || {}).get("authorization");
+    return new Response(JSON.stringify({ access_token: "upgraded.jwt.token", refresh_token: "refresh" }), {
+      status: 200, headers: { "content-type": "application/json" }
+    });
+  };
+  try {
+    const token = "signed-in-user-jwt";
+    const response = await worker.fetch(new Request("https://example.test/api/auth/mfa/verify", {
+      method: "POST", headers: { authorization: "Bearer " + token, "content-type": "application/json" },
+      body: JSON.stringify({
+        factor_id: "00000000-0000-0000-0000-000000000001",
+        challenge_id: "00000000-0000-0000-0000-000000000002",
+        code: "123456"
+      })
+    }), { SUPABASE_URL: "https://example.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test" });
+    assert.equal(response.status, 200);
+    assert.equal(new URL(capturedUrl).pathname, "/auth/v1/factors/00000000-0000-0000-0000-000000000001/verify");
+    assert.equal(capturedAuthorization, "Bearer " + token);
+    assert.equal(JSON.parse(capturedBody).code, "123456");
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("MFA challenge forwards the selected factor and user session", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl = "";
+  let capturedBody = "";
+  let capturedAuthorization = "";
+  globalThis.fetch = async (url, options = {}) => {
+    capturedUrl = String(url);
+    capturedBody = String(options.body || "");
+    capturedAuthorization = new Headers(options.headers || {}).get("authorization");
+    return new Response(JSON.stringify({ id: "challenge-1" }), {
+      status: 200, headers: { "content-type": "application/json" }
+    });
+  };
+  try {
+    const token = "signed-in-user-jwt";
+    const response = await worker.fetch(new Request("https://example.test/api/auth/mfa/challenge", {
+      method: "POST", headers: { authorization: "Bearer " + token, "content-type": "application/json" },
+      body: JSON.stringify({ factor_id: "00000000-0000-0000-0000-000000000001" })
+    }), { SUPABASE_URL: "https://example.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test" });
+    assert.equal(response.status, 200);
+    assert.equal(new URL(capturedUrl).pathname, "/auth/v1/factors/00000000-0000-0000-0000-000000000001/challenge");
+    assert.equal(capturedAuthorization, "Bearer " + token);
+    assert.equal(JSON.parse(capturedBody).factor_id, "00000000-0000-0000-0000-000000000001");
+  } finally { globalThis.fetch = originalFetch; }
+});
