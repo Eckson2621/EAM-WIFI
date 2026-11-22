@@ -244,6 +244,39 @@ function saveSession(value) {
 }
 
 const PLATFORM_PHONE = "0613794448";
+function createRouterPaymentNotice(router) {
+  const raw = router.router_subscriptions;
+  const sub = Array.isArray(raw) ? raw[0] : raw;
+  const now = Date.now();
+  const paid = sub && sub.status === "active" && sub.expires_at && new Date(sub.expires_at).getTime() > now;
+  if (paid) return null;
+  const trialExpiry = sub && sub.trial_expires_at ? new Date(sub.trial_expires_at).getTime() : 0;
+  const trialStarted = Boolean(sub && sub.trial_started_at);
+  const trialRunning = trialExpiry > now;
+  const panel = document.createElement("div");
+  panel.className = "router-payment-notice";
+  panel.style.cssText = "margin:10px 0;padding:14px;border:1px solid #e4a63b;border-radius:12px;background:#fff8e8;color:#5c3b08";
+  const heading = document.createElement("strong");
+  heading.textContent = trialRunning ? "Router trial is running · Jaribio linaendelea" : trialStarted ? "Trial ended · Muda wa majaribio umeisha" : "5-minute router test · Jaribio la dakika 5";
+  const detail = document.createElement("p");
+  detail.textContent = trialRunning ? "Una muda wa kujaribu muunganisho. Baada ya hapo router itafungwa mpaka malipo yathibitishwe." : trialStarted ? "Router imefungwa. Lipa TSh 7,500/= kisha piga simu au tuma SMS kwa Super Admin." : "Dakika 5 za majaribio zitaanza router itakapounganishwa kwa mara ya kwanza. Baada ya hapo lipa TSh 7,500/= kwa router.";
+  const price = document.createElement("strong"); price.textContent = "LIPA TSh 7,500/= kwa router";
+  const phone = document.createElement("p"); phone.textContent = "Namba ya malipo: " + PLATFORM_PHONE + " · Piga simu au tuma SMS kuthibitisha malipo.";
+  const actions = document.createElement("div"); actions.style.cssText = "display:flex;gap:14px;flex-wrap:wrap";
+  const call = document.createElement("a"); call.href = "tel:" + PLATFORM_PHONE; call.textContent = "Piga simu";
+  const sms = document.createElement("a"); sms.href = "sms:" + PLATFORM_PHONE + "?body=" + encodeURIComponent("Nimelipia EAM-WIFI TSh 7,500 kwa router ID " + router.id + ". Tafadhali thibitisha malipo."); sms.textContent = "Tuma SMS";
+  actions.append(call, sms);
+  const timer = document.createElement("small");
+  if (trialRunning) { timer.dataset.trialExpires = String(trialExpiry); panel.append(heading, detail, timer, price, phone, actions); }
+  else panel.append(heading, detail, price, phone, actions);
+  return panel;
+}
+setInterval(() => {
+  document.querySelectorAll("[data-trial-expires]").forEach((node) => {
+    const seconds = Math.max(0, Math.ceil((Number(node.dataset.trialExpires) - Date.now()) / 1000));
+    node.textContent = seconds > 0 ? "Muda uliobaki: " + Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0") : "Muda wa majaribio umeisha. Lipa ili kuendelea.";
+  });
+}, 1000);
 function setPlatformCallNotice(element, message) {
   element.replaceChildren();
   const text = document.createElement("span");
@@ -321,12 +354,15 @@ async function loadWorkspace() {
       }
       info.append(routerInfo);
       if (membership.role === "owner" || membership.role === "admin") {
+        routers.forEach((router) => { const notice = createRouterPaymentNotice(router); if (notice) info.append(notice); });
+      }
+      if (membership.role === "owner" || membership.role === "admin") {
         const routerSubscriptions = routers.map((router) => {
           const raw = router.router_subscriptions;
           const sub = Array.isArray(raw) ? raw[0] : raw;
           const state = sub?.status === "active" && sub.expires_at && new Date(sub.expires_at) > new Date()
             ? "ACTIVE" : (sub?.status === "active" ? "EXPIRED" : String(sub?.status || "PENDING").toUpperCase());
-          return `${router.name || "Router"}: ${state} · TSh 6,000/month`;
+          return `${router.name || "Router"}: ${state} · TSh 7,500/month`;
         });
         if (routerSubscriptions.length) {
           const billing = document.createElement("small");
@@ -346,7 +382,7 @@ async function loadWorkspace() {
           <label>Router name<input name="router_name" required minlength="2" maxlength="100" placeholder="Router 2"></label>
           <label>Router brand<select name="router_vendor"><option value="mikrotik">MikroTik</option><option value="ubiquiti">Ubiquiti</option><option value="tp_link">TP-Link</option><option value="huawei">Huawei</option><option value="other">Other</option></select></label>
           <label>Router model<input name="router_model" maxlength="100" placeholder="Optional model"></label>
-          <div class="package-form-actions"><button class="primary" type="submit">Register router</button><small class="muted" data-feedback>Each router costs TSh 6,000 per month. Payment approval is separate.</small></div>
+          <div class="package-form-actions"><button class="primary" type="submit">Register router</button><small class="muted" data-feedback>Each router costs TSh 7,500 per month. A 5-minute test starts when the router first connects.</small></div>
         `;
         addRouterButton.addEventListener("click", () => { addRouterForm.hidden = !addRouterForm.hidden; });
         addRouterForm.addEventListener("submit", async (event) => {
@@ -362,7 +398,7 @@ async function loadWorkspace() {
               router_vendor: form.router_vendor.value, router_model: form.router_model.value.trim(),
               integration_type: form.router_vendor.value === "mikrotik" ? "mikrotik_hotspot" : "other"
             }) });
-            feedback.textContent = `Router registered. Payment pending: TSh 6,000/month. Router ID: ${created.device_id}`;
+            feedback.textContent = `Router registered. Connect it to start the 5-minute test. After the test: TSh 7,500/month. Router ID: ${created.device_id}`;
             addRouterForm.reset();
             await loadWorkspace();
           } catch (error) { feedback.textContent = error.message; submit.disabled = false; }
@@ -602,14 +638,14 @@ async function loadPlatformAccounts() {
       const info = document.createElement("div");
       const name = document.createElement("strong"); name.textContent = account.name;
       const meta = document.createElement("small");
-      meta.textContent = `${account.contact_phone || "No phone"} · Business status: ${account.status} · Router subscriptions are billed separately at TSh 6,000/month each.`;
+      meta.textContent = `${account.contact_phone || "No phone"} · Business status: ${account.status} · Router subscriptions are billed separately at TSh 7,500/month each.`;
       info.append(name,meta);
       const approve = document.createElement("button"); approve.type="button"; approve.className="secondary";
       approve.textContent = account.status === "active" ? "Business approved" : "Approve business registration";
       approve.disabled = account.status === "active";
       const message = document.createElement("small"); message.className="muted";
       approve.addEventListener("click",async()=>{
-        if(!window.confirm(`Approve ${account.name} as an EAM-WIFI business? Router subscriptions are charged separately at TSh 6,000/month per router.`)) return;
+        if(!window.confirm(`Approve ${account.name} as an EAM-WIFI business? There is no business registration fee. Each router costs TSh 7,500/month after its 5-minute test.`)) return;
         approve.disabled=true; message.textContent="Approving business…";
         try {
           await api("/api/platform/admin/approve",{method:"POST",body:JSON.stringify({organization_id:account.id,payment_method:"other",payment_reference:null,months:1})});
@@ -651,7 +687,7 @@ async function loadPlatformRouters() {
       const approve = document.createElement("button"); approve.type="button"; approve.className="secondary"; approve.textContent="Approve router payment";
       const message = document.createElement("small"); message.className="muted";
       approve.addEventListener("click",async()=>{
-        const n=Number(months.value), total=n*6000;
+        const n=Number(months.value), total=n*7500;
         if(!window.confirm(`Confirm ${org?.name || "this business"} paid TSh ${total.toLocaleString()} for this router for ${n} month(s)?`)) return;
         approve.disabled=true; message.textContent="Approving router subscription…";
         try {
