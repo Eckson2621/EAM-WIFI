@@ -43,18 +43,18 @@ Each Wi-Fi package maps to RouterOS Hotspot user/session attributes, for example
 
 EAM-WIFI must send the package's actual attributes to the router connector. A TSh 500 voucher is not automatically one hour: the business owner defines the package duration, speed and data allowance in EAM-WIFI, and the connector applies those values.
 
-## Required secure integration (not yet live)
+## Implemented cloud-side integration foundation (physical validation pending)
 
-The current application stores router metadata and queues voucher redemption events. It does not yet have a secure MikroTik connector that can apply the event to RouterOS. Before customers can get internet automatically, implement and test all of these:
+The current application includes authenticated owner pairing, hashed router credentials, router-initiated HTTPS heartbeat, event polling and acknowledgement, queued voucher redemption, and a RouterOS 7 agent template. The database now requires an active TSh 6,000/month router subscription before accepting voucher redemption or router events. The agent template has not yet passed a real-router test, so do not treat this as production-ready.
 
-1. Pair each MikroTik using a short-lived, single-use challenge initiated by an authenticated owner.
-2. Have the router-side connector initiate outbound HTTPS to the Cloudflare Worker. Never expose RouterOS API/Winbox to the public internet.
-3. Authenticate every heartbeat, poll and acknowledgement with a rotatable device credential stored as a hash or protected secret, never in browser JavaScript or ordinary logs.
-4. Poll/receive queued redemption jobs, validate the job signature and idempotency key, then create/enable exactly one Hotspot user with the package's timeout, quota and rate limits.
-5. Acknowledge activation only after RouterOS confirms the user/session was applied. Failed jobs must retry safely and must not irreversibly consume a voucher before successful activation.
-6. Report disconnect/expiry/session counters back to EAM-WIFI.
-7. Configure MikroTik Hotspot login redirect and walled garden so the captive portal is reachable before authentication. Validate the portal's MAC parameter and HTTPS redirect behavior on actual Android and iOS devices.
-8. Run security tests, replay tests, duplicate-event tests, router-offline tests and real customer-session tests.
+Remaining work before customer production use:
+
+1. Update and validate the RouterOS agent so an inactive/expired router subscription disables EAM-WIFI hotspot access on the physical router, including existing active sessions.
+2. Pair each MikroTik using the owner dashboard and verify the token is never exposed in ordinary logs or support messages.
+3. Configure MikroTik Hotspot login redirect and walled garden so the captive portal is reachable before authentication. Validate the portal's MAC parameter and HTTPS redirect behavior on actual Android and iOS devices.
+4. Confirm event retries are idempotent and a failed RouterOS apply cannot result in a paid voucher being silently lost.
+5. Report connected-time usage, data counters and disconnection/expiry status back to EAM-WIFI.
+6. Run security tests, replay tests, duplicate-event tests, router-offline tests, reboot tests and real customer-session tests.
 
 ## Safe rollout checklist
 
@@ -72,4 +72,4 @@ The current application stores router metadata and queues voucher redemption eve
 
 ## Current status
 
-This document records the selected reference design. The application still needs the secure router pairing/agent, queue processor, RouterOS provisioning/acknowledgement, and live hardware validation. No router has been configured, no access point has been paired, and no live 50–100 m coverage has been measured. Do not treat this as a production-ready installation guide or paste example commands into a live router before the connector and exact RouterOS configuration are reviewed.
+The cloud-side pairing, heartbeat, queue and acknowledgement foundation exists, and router subscription checks are enforced in Supabase. No physical router has yet been paired or tested. In particular, local RouterOS access revocation after a router subscription expires, connected-time/data usage synchronization, captive-portal redirect behavior and real internet access remain unverified. No live 50–100 m coverage has been measured. Do not treat this as production-ready until the physical acceptance checklist passes.
