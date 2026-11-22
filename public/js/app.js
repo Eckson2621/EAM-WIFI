@@ -417,7 +417,7 @@ function showAdminMfaGate({ mode, factorId, qrCode, secret, message = "" }) {
   host.replaceChildren();
 
   const heading = document.createElement("h2");
-  heading.textContent = mode === "enroll" ? "Protect your Super Admin account" : "Super Admin verification";
+  heading.textContent = mode === "enroll" ? "Protect your Super Admin account" : mode === "error" ? "Security setup needs attention" : "Super Admin verification";
   const intro = document.createElement("p");
   intro.className = "muted";
   intro.textContent = mode === "enroll"
@@ -470,6 +470,7 @@ function showAdminMfaGate({ mode, factorId, qrCode, secret, message = "" }) {
   signout.textContent = "Sign out";
   signout.addEventListener("click", signOut);
   form.append(label, submit);
+  if (mode === "error") form.hidden = true;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const value = code.value.trim();
@@ -502,7 +503,20 @@ function showAdminMfaGate({ mode, factorId, qrCode, secret, message = "" }) {
       code.focus();
     }
   });
-  host.append(form, status, signout);
+  host.append(form, status);
+  if (mode === "error") {
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.className = "primary";
+    retry.textContent = "Retry security setup";
+    retry.addEventListener("click", async () => {
+      retry.disabled = true;
+      await loadWorkspace();
+      retry.disabled = false;
+    });
+    host.append(retry);
+  }
+  host.append(signout);
   host.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
