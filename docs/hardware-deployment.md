@@ -45,11 +45,11 @@ EAM-WIFI must send the package's actual attributes to the router connector. A TS
 
 ## Implemented cloud-side integration foundation (physical validation pending)
 
-The current application includes authenticated owner pairing, hashed router credentials, router-initiated HTTPS heartbeat, event polling and acknowledgement, queued voucher redemption, and a RouterOS 7 agent template. The database now requires an active TSh 6,000/month router subscription before accepting voucher redemption or router events. The agent template has not yet passed a real-router test, so do not treat this as production-ready.
+The current application includes authenticated owner pairing, hashed router credentials, router-initiated HTTPS heartbeat, event polling and acknowledgement, queued voucher redemption, and a RouterOS 7 agent template. Each router receives a five-minute trial beginning at its first successful heartbeat. After that, voucher redemption and normal router use require an individually approved TSh 7,500/month router subscription. Business registration itself has no platform fee. On trial expiry, the router event queue instructs the RouterOS agent to disconnect and remove EAM-WIFI hotspot users. Physical enforcement still requires a real-router test.
 
 Remaining work before customer production use:
 
-1. Update and validate the RouterOS agent so an inactive/expired router subscription disables EAM-WIFI hotspot access on the physical router, including existing active sessions.
+1. Validate on a physical MikroTik that the RouterOS agent receives the subscription-expiry cleanup events and disconnects/removes existing EAM-WIFI hotspot users.
 2. Pair each MikroTik using the owner dashboard and verify the token is never exposed in ordinary logs or support messages.
 3. Configure MikroTik Hotspot login redirect and walled garden so the captive portal is reachable before authentication. Validate the portal's MAC parameter and HTTPS redirect behavior on actual Android and iOS devices.
 4. Confirm event retries are idempotent and a failed RouterOS apply cannot result in a paid voucher being silently lost.
@@ -72,4 +72,4 @@ Remaining work before customer production use:
 
 ## Current status
 
-The cloud-side pairing, heartbeat, queue and acknowledgement foundation exists, and router subscription checks are enforced in Supabase. No physical router has yet been paired or tested. In particular, local RouterOS access revocation after a router subscription expires, connected-time/data usage synchronization, captive-portal redirect behavior and real internet access remain unverified. No live 50–100 m coverage has been measured. Do not treat this as production-ready until the physical acceptance checklist passes.
+The cloud-side pairing, heartbeat, queue and acknowledgement foundation exists, and router subscription checks are enforced in Supabase. No physical router has yet been paired or tested. In particular, RouterOS access revocation after a router subscription expires, connected-time/data usage synchronization, captive-portal redirect behavior and real internet access remain unverified. No live 50–100 m coverage has been measured. Do not treat this as production-ready until the physical acceptance checklist passes.
