@@ -498,11 +498,12 @@ async function handleApi(request, env) {
     let input;
     try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
     const organizationId = String(input.organization_id || "");
+    const deviceId = String(input.device_id || "");
     const packageId = String(input.package_id || "");
     const amountPaid = Number(input.amount_paid);
     const paymentMethod = String(input.payment_method || "");
-    if (!/^[0-9a-f-]{36}$/i.test(organizationId) || !/^[0-9a-f-]{36}$/i.test(packageId)) {
-      return json({ error: "Valid organization_id and package_id are required." }, 400);
+    if (!/^[0-9a-f-]{36}$/i.test(organizationId) || !/^[0-9a-f-]{36}$/i.test(deviceId) || !/^[0-9a-f-]{36}$/i.test(packageId)) {
+      return json({ error: "Valid organization_id, device_id and package_id are required." }, 400);
     }
     if (!Number.isSafeInteger(amountPaid) || amountPaid < 1) {
       return json({ error: "A valid amount paid is required." }, 400);
@@ -578,14 +579,7 @@ async function handleApi(request, env) {
     if (["PATCH", "DELETE"].includes(request.method) && !/^[0-9a-f-]{36}$/i.test(packageId || "")) {
       return json({ error: "A valid package id is required." }, 400);
     }
-    const subscriptionCheck = await supabaseFetch(env, "/rest/v1/rpc/platform_subscription_status", {
-      method: "POST", body: JSON.stringify({ p_organization_id: orgId })
-    }, token);
-    if (!subscriptionCheck.ok) return new Response(await subscriptionCheck.text(), { status: subscriptionCheck.status, headers: JSON_HEADERS });
-    const subscription = await subscriptionCheck.json();
-    if (!subscription?.active) return json({ error: "EAM-WIFI subscription is pending or expired. Contact the platform administrator." }, 403);
-
-    const fields = ["name","description","price_tzs","duration_seconds","validity_seconds","data_limit_bytes","speed_down_kbps","speed_up_kbps","max_devices","session_mode","is_active","display_order"];
+    // Package definitions belong to the business; voucher issuance enforces the selected router's own subscription.\n\n    const fields = ["name","description","price_tzs","duration_seconds","validity_seconds","data_limit_bytes","speed_down_kbps","speed_up_kbps","max_devices","session_mode","is_active","display_order"];
     if (request.method === "POST") {
       const name = String(input.name || "").trim();
       const price = Number(input.price_tzs);
