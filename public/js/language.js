@@ -1,6 +1,8 @@
 (() => {
   const translations = {
     "Wi-Fi Hotspot Management":"Usimamizi wa Hotspot za Wi-Fi",
+    "Language":"Lugha",
+    "EAM-WIFI | Hotspot Management":"EAM-WIFI | Usimamizi wa Hotspot",
     "Sign in, choose a topic below and send a short message. Never send passwords, API tokens or router secrets.":"Ingia, chagua mada hapa chini na tuma ujumbe mfupi. Usitume nenosiri, API token au siri za router.",
     "Sign in first, then send a message. Your account email and business reference (if selected) will be attached automatically.":"Ingia kwanza kisha tuma ujumbe. Barua pepe ya akaunti yako na taarifa za biashara (ukichagua) zitaambatanishwa moja kwa moja.",
     "Complete your hotspot site and router setup. After submission, call the Super Admin for account approval. Your service stays locked until approval.":"Kamilisha taarifa za eneo la hotspot na router. Baada ya kutuma, mpigie Msimamizi Mkuu ili akaunti iidhinishwe. Huduma itabaki imefungwa hadi idhini itolewe.",
@@ -387,6 +389,7 @@
     const picker = document.getElementById("eam-language");
     if (picker && picker.value !== language) picker.value = language;
     document.documentElement.lang = language;
+    document.title = language === "sw" ? (translations["EAM-WIFI | Hotspot Management"] || document.title) : "EAM-WIFI | Hotspot Management";
   }
   const picker = document.getElementById("eam-language");
   if (picker) {
