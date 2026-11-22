@@ -2,6 +2,18 @@
   const translations = {
     "Wi-Fi Hotspot Management":"Usimamizi wa Hotspot za Wi-Fi",
     "Language":"Lugha",
+    "Router trial is running · Jaribio linaendelea":"Jaribio la router linaendelea",
+    "Trial ended · Muda wa majaribio umeisha":"Muda wa majaribio umeisha",
+    "5-minute router test · Jaribio la dakika 5":"Jaribio la router la dakika 5",
+    "Muda uliobaki: ":"Time remaining: ",
+    "Muda wa majaribio umeisha. Lipa ili kuendelea.":"Trial time has ended. Pay to continue.",
+    "Una muda wa kujaribu muunganisho. Baada ya hapo router itafungwa mpaka malipo yathibitishwe.":"You can test the connection during this period. After that, the router will be locked until payment is confirmed.",
+    "Router imefungwa. Lipa TSh 7,500/= kisha piga simu au tuma SMS kwa Super Admin.":"Router is locked. Pay TSh 7,500/= then call or SMS the Super Admin.",
+    "Dakika 5 za majaribio zitaanza router itakapounganishwa kwa mara ya kwanza. Baada ya hapo lipa TSh 7,500/= kwa router.":"The 5-minute trial starts when the router connects for the first time. After that, pay TSh 7,500/= per router.",
+    "LIPA TSh 7,500/= kwa router":"PAY TSh 7,500/= per router",
+    "Namba ya malipo: ":"Payment number: ",
+    "Piga simu":"Call",
+    "Tuma SMS":"Send SMS",
     "EAM-WIFI | Hotspot Management":"EAM-WIFI | Usimamizi wa Hotspot",
     "Sign in, choose a topic below and send a short message. Never send passwords, API tokens or router secrets.":"Ingia, chagua mada hapa chini na tuma ujumbe mfupi. Usitume nenosiri, API token au siri za router.",
     "Sign in first, then send a message. Your account email and business reference (if selected) will be attached automatically.":"Ingia kwanza kisha tuma ujumbe. Barua pepe ya akaunti yako na taarifa za biashara (ukichagua) zitaambatanishwa moja kwa moja.",
@@ -359,6 +371,17 @@
         for (const [en, sw] of Object.entries(translations)) {
           if (source.startsWith(en) && source.length > en.length) {
             result = raw.replace(en, sw);
+            break;
+          }
+        }
+      }
+    } else {
+      const english = Object.entries(translations).find(([, sw]) => sw === source)?.[0];
+      if (english) result = raw.replace(source, english);
+      else {
+        for (const [en, sw] of Object.entries(translations)) {
+          if (source.startsWith(sw) && source.length > sw.length) {
+            result = raw.replace(sw, en);
             break;
           }
         }
