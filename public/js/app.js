@@ -66,6 +66,7 @@ async function sendSupportMessage(event) {
   $("support-feedback").textContent = "Sending your message securely…";
   try {
     const memberships = await api("/api/organizations");
+  startRouterPaymentRefresh();
     const active = memberships.find((m) => m.status === "active" && m.role === "owner");
     await api("/api/support/messages", { method: "POST", body: JSON.stringify({
       category: $("support-category").value,
@@ -288,6 +289,27 @@ function setPlatformCallNotice(element, message) {
   element.append(text, link);
 }
 
+async function refreshRouterPaymentNotices() {
+  const hosts = Array.from(document.querySelectorAll("[data-router-payment-host]"));
+  const orgIds = [...new Set(hosts.map((host) => host.dataset.organizationId).filter(Boolean))];
+  for (const orgId of orgIds) {
+    try {
+      const routers = await api("/api/routers?organization_id=" + encodeURIComponent(orgId));
+      hosts.filter((host) => host.dataset.organizationId === orgId).forEach((host) => {
+        const router = routers.find((item) => item.id === host.dataset.routerPaymentHost);
+        if (!router) return;
+        host.replaceChildren();
+        const notice = createRouterPaymentNotice(router);
+        if (notice) { host.append(notice); host.hidden = false; } else host.hidden = true;
+      });
+    } catch (error) { /* Retain the last known payment notice when refresh fails. */ }
+  }
+}
+let routerPaymentRefreshTimer = null;
+function startRouterPaymentRefresh() {
+  if (routerPaymentRefreshTimer) clearInterval(routerPaymentRefreshTimer);
+  routerPaymentRefreshTimer = setInterval(refreshRouterPaymentNotices, 15000);
+}
 async function loadWorkspace() {
   const user = await api("/api/auth/user");
   const memberships = await api("/api/organizations");
@@ -354,7 +376,14 @@ async function loadWorkspace() {
       }
       info.append(routerInfo);
       if (membership.role === "owner" || membership.role === "admin") {
-        routers.forEach((router) => { const notice = createRouterPaymentNotice(router); if (notice) info.append(notice); });
+        routers.forEach((router) => {
+          const noticeHost = document.createElement("div");
+          noticeHost.dataset.routerPaymentHost = router.id;
+          noticeHost.dataset.organizationId = membership.organization_id;
+          const notice = createRouterPaymentNotice(router);
+          if (notice) noticeHost.append(notice); else noticeHost.hidden = true;
+          info.append(noticeHost);
+        });
       }
       if (membership.role === "owner" || membership.role === "admin") {
         const routerSubscriptions = routers.map((router) => {
@@ -676,7 +705,10 @@ async function loadPlatformRouters() {
       const meta = document.createElement("small");
       const status = sub?.status === "active" && sub.expires_at && new Date(sub.expires_at) > new Date() ? "ACTIVE" :
         (sub?.status === "active" ? "EXPIRED" : String(sub?.status || "PENDING").toUpperCase());
-      meta.textContent = `${site?.name || "No site"} · ${router.vendor || "Unknown brand"} · ${org?.contact_phone || "No phone"} · ${status} · ${sub?.expires_at ? "Expires " + new Date(sub.expires_at).toLocaleDateString() : "Not yet approved"} · TSh 6,000/month`;
+      const trialState = sub?.trial_expires_at && new Date(sub.trial_expires_at) > new Date()
+        ? " · TRIAL until " + new Date(sub.trial_expires_at).toLocaleTimeString()
+        : sub?.trial_started_at && status !== "ACTIVE" ? " · TRIAL EXPIRED" : "";
+      meta.textContent = `${site?.name || "No site"} · ${router.vendor || "Unknown brand"} · ${org?.contact_phone || "No phone"} · ${status}${trialState} · ${sub?.expires_at ? "Expires " + new Date(sub.expires_at).toLocaleDateString() : "Not yet approved"} · TSh 7,500/month`;
       info.append(name, meta);
       const controls = document.createElement("div"); controls.className = "stack";
       const months = document.createElement("select"); months.setAttribute("aria-label","Router subscription months");
