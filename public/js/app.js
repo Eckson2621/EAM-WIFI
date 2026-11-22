@@ -228,6 +228,10 @@ function setMode(nextMode) {
   $("signup-tab").classList.toggle("active", mode === "signup");
   $("submit-auth").textContent = mode === "signin" ? "Sign in" : "Create account";
   $("password").autocomplete = mode === "signin" ? "current-password" : "new-password";
+  $("password").minLength = mode === "signup" ? 12 : 8;
+  $("password").title = mode === "signup"
+    ? "At least 12 characters with uppercase, lowercase, a number and a symbol."
+    : "Enter your account password.";
   $("signup-details").classList.toggle("hidden", mode !== "signup");
   ["signup-owner","signup-business","signup-phone","signup-country","signup-region","signup-district","signup-address"].forEach((id) => {
     const field = $(id);
@@ -388,8 +392,153 @@ function startRouterPaymentRefresh() {
   if (routerPaymentRefreshTimer) clearInterval(routerPaymentRefreshTimer);
   routerPaymentRefreshTimer = setInterval(refreshRouterPaymentNotices, 15000);
 }
+function decodeAccessTokenClaims(token) {
+  try {
+    const payload = String(token || "").split(".")[1];
+    if (!payload) return {};
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")));
+  } catch { return {}; }
+}
+
+function showAdminMfaGate({ mode, factorId, qrCode, secret, message = "" }) {
+  let host = $("security-gate");
+  if (!host) {
+    host = document.createElement("section");
+    host.id = "security-gate";
+    host.className = "panel";
+    $("auth-panel").parentNode.insertBefore(host, $("auth-panel"));
+  }
+  ["welcome-guide","auth-panel","business-onboarding","dashboard","platform-admin","chat-panel"].forEach((id) => {
+    const node = $(id);
+    if (node) node.classList.add("hidden");
+  });
+  host.classList.remove("hidden");
+  host.replaceChildren();
+
+  const heading = document.createElement("h2");
+  heading.textContent = mode === "enroll" ? "Protect your Super Admin account" : "Super Admin verification";
+  const intro = document.createElement("p");
+  intro.className = "muted";
+  intro.textContent = mode === "enroll"
+    ? "Scan this QR code using Google Authenticator, Microsoft Authenticator or another TOTP app. Keep the secret private."
+    : "Enter the current six-digit code from your authenticator app. The Super Admin dashboard stays locked until verification succeeds.";
+  host.append(heading, intro);
+
+  if (qrCode) {
+    const image = document.createElement("img");
+    image.alt = "Authenticator enrollment QR code";
+    image.style.cssText = "display:block;width:220px;max-width:100%;height:auto;margin:12px auto;background:#fff;padding:12px;border-radius:10px";
+    image.src = qrCode.startsWith("data:") ? qrCode : "data:image/svg+xml;charset=utf-8," + encodeURIComponent(qrCode);
+    host.append(image);
+  }
+  if (secret) {
+    const label = document.createElement("p");
+    label.textContent = "Manual setup key (keep private):";
+    const key = document.createElement("code");
+    key.style.cssText = "display:block;overflow-wrap:anywhere;padding:10px;background:#eef2f8;border-radius:8px";
+    key.textContent = secret;
+    host.append(label, key);
+  }
+
+  const form = document.createElement("form");
+  form.className = "stack";
+  const label = document.createElement("label");
+  label.textContent = "Six-digit authenticator code";
+  const code = document.createElement("input");
+  code.type = "text";
+  code.inputMode = "numeric";
+  code.autocomplete = "one-time-code";
+  code.pattern = "[0-9]{6}";
+  code.maxLength = 6;
+  code.minLength = 6;
+  code.required = true;
+  code.placeholder = "000000";
+  code.setAttribute("aria-label", "Six-digit authenticator code");
+  label.append(code);
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  submit.className = "primary";
+  submit.textContent = mode === "enroll" ? "Enable two-step protection" : "Verify and open Super Admin";
+  const status = document.createElement("p");
+  status.className = "message";
+  status.setAttribute("role", "status");
+  status.textContent = message;
+  const signout = document.createElement("button");
+  signout.type = "button";
+  signout.className = "secondary";
+  signout.textContent = "Sign out";
+  signout.addEventListener("click", signOut);
+  form.append(label, submit);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const value = code.value.trim();
+    if (!/^\d{6}$/.test(value)) {
+      status.textContent = "Enter all six digits.";
+      return;
+    }
+    submit.disabled = true;
+    status.textContent = "Checking your authenticator code…";
+    try {
+      const challenge = await api("/api/auth/mfa/challenge", {
+        method: "POST", body: JSON.stringify({ factor_id: factorId })
+      });
+      const verified = await api("/api/auth/mfa/verify", {
+        method: "POST",
+        body: JSON.stringify({ factor_id: factorId, challenge_id: challenge.id, code: value })
+      });
+      const nextSession = verified.session || verified;
+      if (!nextSession.access_token) throw new Error("Supabase did not return an upgraded secure session. Try again.");
+      if (decodeAccessTokenClaims(nextSession.access_token).aal !== "aal2") {
+        throw new Error("Two-step verification was not confirmed by Supabase. Access remains locked.");
+      }
+      saveSession({ ...session, ...nextSession });
+      host.classList.add("hidden");
+      await loadWorkspace();
+    } catch (error) {
+      status.textContent = error.message;
+      status.style.color = "#a33b32";
+      submit.disabled = false;
+      code.focus();
+    }
+  });
+  host.append(form, status, signout);
+  host.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function ensurePlatformAdminMfa(user) {
+  if (String(user?.email || "").toLowerCase() !== "mwalimueckson2104@gmail.com") return true;
+  const claims = decodeAccessTokenClaims(session?.access_token);
+  if (claims.aal === "aal2") return true;
+  try {
+    const result = await api("/api/auth/mfa/factors");
+    const factors = Array.isArray(result) ? result :
+      Array.isArray(result.factors) ? result.factors :
+      [...(Array.isArray(result.totp) ? result.totp : []), ...(Array.isArray(result.phone) ? result.phone : [])];
+    const verified = factors.find((factor) => (factor.factor_type === "totp" || factor.type === "totp") && factor.status === "verified");
+    if (verified) {
+      showAdminMfaGate({ mode: "challenge", factorId: verified.id });
+      return false;
+    }
+    for (const factor of factors.filter((item) => item.status === "unverified")) {
+      await api("/api/auth/mfa/factors/" + encodeURIComponent(factor.id), { method: "DELETE" });
+    }
+    const enrollment = await api("/api/auth/mfa/enroll", { method: "POST", body: JSON.stringify({}) });
+    const factorId = enrollment.id || enrollment.factor?.id;
+    const qrCode = enrollment.totp?.qr_code || enrollment.totp?.qrCode || "";
+    const secret = enrollment.totp?.secret || "";
+    if (!factorId || !qrCode) throw new Error("Supabase did not return the authenticator QR code.");
+    showAdminMfaGate({ mode: "enroll", factorId, qrCode, secret });
+    return false;
+  } catch (error) {
+    showAdminMfaGate({ mode: "error", factorId: "", message: "Security setup could not continue: " + error.message + " Sign out and retry, or contact support." });
+    return false;
+  }
+}
+
 async function loadWorkspace() {
   const user = await api("/api/auth/user");
+  if (!(await ensurePlatformAdminMfa(user))) return;
   const memberships = await api("/api/organizations");
   startRouterPaymentRefresh();
   if (window.EAMChat) await window.EAMChat.start(user, memberships);
@@ -1221,6 +1370,7 @@ async function signOut() {
   $("business-onboarding").classList.add("hidden");
   $("dashboard").classList.add("hidden");
   $("platform-admin").classList.add("hidden");
+  $("security-gate")?.classList.add("hidden");
   $("auth-panel").classList.remove("hidden");
   $("password").value = "";
   showMessage("You have signed out.", false);
