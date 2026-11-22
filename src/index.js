@@ -235,16 +235,22 @@ async function handleApi(request, env) {
     let input;
     try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
     const organizationId = String(input.organization_id || "");
-    if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return json({ error: "A valid organization_id is required." }, 400);
+    const deviceId = String(input.device_id || "");
+    if (deviceId ? !/^[0-9a-f-]{36}$/i.test(deviceId) : !/^[0-9a-f-]{36}$/i.test(organizationId)) {
+      return json({ error: "A valid router device_id is required." }, 400);
+    }
     const random = new Uint8Array(32);
     crypto.getRandomValues(random);
     const deviceToken = Array.from(random, b => b.toString(16).padStart(2, "0")).join("");
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken));
     const tokenHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-    const upstream = await supabaseFetch(env, "/rest/v1/rpc/create_router_device_credential", {
-      method: "POST",
-      body: JSON.stringify({ p_organization_id: organizationId, p_token_hash: tokenHash, p_expires_at: expiresAt })
+    const pairingRpc = deviceId ? "create_router_device_credential_for_device" : "create_router_device_credential";
+    const pairingPayload = deviceId
+      ? { p_device_id: deviceId, p_token_hash: tokenHash, p_expires_at: expiresAt }
+      : { p_organization_id: organizationId, p_token_hash: tokenHash, p_expires_at: expiresAt };
+    const upstream = await supabaseFetch(env, `/rest/v1/rpc/${pairingRpc}`, {
+      method: "POST", body: JSON.stringify(pairingPayload)
     }, token);
     const body = await upstream.text();
     if (!upstream.ok) return new Response(body, { status: upstream.status, headers: JSON_HEADERS });
