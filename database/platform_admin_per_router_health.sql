@@ -28,7 +28,7 @@ begin
   'support_new',(select count(*) from public.support_messages where status='new'),
   'subscriptions_active',(select count(*) from public.router_subscriptions where status='active' and expires_at>now()),
   'subscriptions_expired',(select count(*) from public.router_subscriptions where status='active' and expires_at<=now()),
-  'subscriptions_pending',(select count(*) from public.router_subscriptions where status<>'active' or expires_at is null or expires_at<=now())
+  'subscriptions_pending',(select count(*) from public.router_subscriptions where status in ('pending','suspended'))
  ) into v_result;
  return v_result;
 end $$;
