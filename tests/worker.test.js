@@ -121,8 +121,35 @@ test("authenticated router lookup forwards the user's JWT and scopes the query t
     const upstreamUrl = new URL(capturedUrl);
     assert.equal(upstreamUrl.pathname, "/rest/v1/network_devices");
     assert.equal(upstreamUrl.searchParams.get("organization_id"), `eq.${organizationId}`);
-    assert.equal(upstreamUrl.searchParams.get("select"), "id,name,vendor,model,connection_status,last_seen_at,created_at");
+    assert.equal(upstreamUrl.searchParams.get("select"), "id,organization_id,site_id,name,vendor,model,connection_status,last_seen_at,created_at,site:hotspot_sites(id,name,slug),router_subscriptions(status,expires_at,monthly_price_tzs)");
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+
+test("paid voucher issuance requires an explicit router ID", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/vouchers/issue-paid", {
+    method: "POST", headers: { authorization: "Bearer test-user-token", "content-type": "application/json" },
+    body: JSON.stringify({ organization_id: "00000000-0000-0000-0000-000000000001", package_id: "00000000-0000-0000-0000-000000000002", amount_paid: 1000, payment_method: "cash" })
+  }), { SUPABASE_URL: "https://example.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test" });
+  assert.equal(response.status, 400);
+  const body = await response.json();
+  assert.match(body.error, /device_id/);
+});
+
+test("additional router registration endpoint rejects unauthenticated requests", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/routers", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ organization_id: "00000000-0000-0000-0000-000000000001", site_name: "Branch 2", router_name: "Router 2" })
+  }), {});
+  assert.equal(response.status, 401);
+});
+
+test("Super Admin router approval endpoint rejects unauthenticated requests", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/platform/admin/approve-router", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ device_id: "00000000-0000-0000-0000-000000000001", payment_method: "cash", months: 1 })
+  }), {});
+  assert.equal(response.status, 401);
 });
