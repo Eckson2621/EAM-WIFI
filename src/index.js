@@ -30,6 +30,19 @@ async function proxyAuth(request, env, path) {
   });
 }
 
+async function proxyAuthenticatedAuth(request, env, path, bodyOverride) {
+  const token = getToken(request);
+  if (!token) return json({ error: "Authentication required." }, 401);
+  const body = bodyOverride !== undefined
+    ? (bodyOverride === null ? undefined : JSON.stringify(bodyOverride))
+    : (["POST", "PUT", "PATCH"].includes(request.method) ? await request.text() : undefined);
+  const upstream = await supabaseFetch(env, path, { method: request.method, body }, token);
+  return new Response(await upstream.text(), {
+    status: upstream.status,
+    headers: { ...JSON_HEADERS, "cache-control": "no-store" }
+  });
+}
+
 async function handleApi(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -76,7 +89,15 @@ async function handleApi(request, env) {
     });
   }
 
-  if (path === "/api/auth/signup" && request.method === "POST") return proxyAuth(request, env, "/auth/v1/signup");
+  if (path === "/api/auth/signup" && request.method === "POST") {
+    let input;
+    try { input = await request.clone().json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const password = String(input.password || "");
+    if (password.length < 12 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      return json({ error: "Use a password with at least 12 characters, including uppercase, lowercase, a number and a symbol." }, 400);
+    }
+    return proxyAuth(request, env, "/auth/v1/signup");
+  }
   if (path === "/api/auth/signin" && request.method === "POST") return proxyAuth(request, env, "/auth/v1/token?grant_type=password");
   if (path === "/api/auth/logout" && request.method === "POST") {
     const token = getToken(request);
@@ -89,6 +110,42 @@ async function handleApi(request, env) {
     if (!token) return json({ error: "Authentication required." }, 401);
     const upstream = await supabaseFetch(env, "/auth/v1/user", { method: "GET" }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
+  }
+
+  if (path === "/api/auth/mfa/factors" && request.method === "GET") {
+    return proxyAuthenticatedAuth(request, env, "/auth/v1/factors");
+  }
+  if (path === "/api/auth/mfa/enroll" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    return proxyAuthenticatedAuth(request, env, "/auth/v1/factors", {
+      factor_type: "totp", friendly_name: "EAM-WIFI Super Admin"
+    });
+  }
+  if (path === "/api/auth/mfa/challenge" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const factorId = String(input.factor_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(factorId)) return json({ error: "A valid MFA factor is required." }, 400);
+    return proxyAuthenticatedAuth(request, env, `/auth/v1/factors/${factorId}/challenge`, {});
+  }
+  if (path === "/api/auth/mfa/verify" && request.method === "POST") {
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const factorId = String(input.factor_id || "");
+    const challengeId = String(input.challenge_id || "");
+    const code = String(input.code || "");
+    if (!/^[0-9a-f-]{36}$/i.test(factorId) || !/^[0-9a-f-]{36}$/i.test(challengeId) || !/^\\d{6}$/.test(code)) {
+      return json({ error: "Enter a valid six-digit authenticator code." }, 400);
+    }
+    return proxyAuthenticatedAuth(request, env, `/auth/v1/factors/${factorId}/verify`, {
+      challenge_id: challengeId, code
+    });
+  }
+  if (path.startsWith("/api/auth/mfa/factors/") && request.method === "DELETE") {
+    const factorId = path.slice("/api/auth/mfa/factors/".length);
+    if (!/^[0-9a-f-]{36}$/i.test(factorId)) return json({ error: "A valid MFA factor is required." }, 400);
+    return proxyAuthenticatedAuth(request, env, `/auth/v1/factors/${factorId}`);
   }
 
   if (path === "/api/public/portal" && request.method === "GET") {
