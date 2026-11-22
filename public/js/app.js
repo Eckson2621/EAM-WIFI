@@ -277,7 +277,7 @@ async function loadWorkspace() {
   $("business-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("onboarding-back-admin").classList.toggle("hidden", !isPlatformAdmin);
   $("platform-admin").classList.toggle("hidden", !isPlatformAdmin);
-  if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformHealth(), loadPlatformAccounts(), loadSupportInbox()]); }
+  if (isPlatformAdmin) { await Promise.all([loadPlatformStats(), loadPlatformHealth(), loadPlatformAccounts(), loadPlatformRouters(), loadSupportInbox()]); }
   await loadMySupportMessages();
   if (!memberships.length) {
     $("dashboard").classList.add("hidden");
@@ -335,6 +335,55 @@ async function loadWorkspace() {
         }).join(" | ");
       }
       info.append(routerInfo);
+      if (membership.role === "owner" || membership.role === "admin") {
+        const routerSubscriptions = routers.map((router) => {
+          const raw = router.router_subscriptions;
+          const sub = Array.isArray(raw) ? raw[0] : raw;
+          const state = sub?.status === "active" && sub.expires_at && new Date(sub.expires_at) > new Date()
+            ? "ACTIVE" : (sub?.status === "active" ? "EXPIRED" : String(sub?.status || "PENDING").toUpperCase());
+          return `${router.name || "Router"}: ${state} · TSh 6,000/month`;
+        });
+        if (routerSubscriptions.length) {
+          const billing = document.createElement("small");
+          billing.textContent = "Router subscriptions: " + routerSubscriptions.join(" | ");
+          info.append(billing);
+        }
+        const addRouterButton = document.createElement("button");
+        addRouterButton.type = "button";
+        addRouterButton.className = "secondary";
+        addRouterButton.textContent = "＋ Add New Router · Ongeza router";
+        const addRouterForm = document.createElement("form");
+        addRouterForm.className = "package-form";
+        addRouterForm.hidden = true;
+        addRouterForm.innerHTML = `
+          <label>Hotspot/site name<input name="site_name" required minlength="2" maxlength="100" placeholder="Branch or location name"></label>
+          <label>Site address<input name="site_address" maxlength="200" placeholder="Optional address"></label>
+          <label>Router name<input name="router_name" required minlength="2" maxlength="100" placeholder="Router 2"></label>
+          <label>Router brand<select name="router_vendor"><option value="mikrotik">MikroTik</option><option value="ubiquiti">Ubiquiti</option><option value="tp_link">TP-Link</option><option value="huawei">Huawei</option><option value="other">Other</option></select></label>
+          <label>Router model<input name="router_model" maxlength="100" placeholder="Optional model"></label>
+          <div class="package-form-actions"><button class="primary" type="submit">Register router</button><small class="muted" data-feedback>Each router costs TSh 6,000 per month. Payment approval is separate.</small></div>
+        `;
+        addRouterButton.addEventListener("click", () => { addRouterForm.hidden = !addRouterForm.hidden; });
+        addRouterForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const submit = addRouterForm.querySelector('button[type="submit"]');
+          const feedback = addRouterForm.querySelector("[data-feedback]");
+          submit.disabled = true; feedback.textContent = "Registering router…";
+          try {
+            const form = addRouterForm.elements;
+            const created = await api("/api/routers", { method: "POST", body: JSON.stringify({
+              organization_id: membership.organization_id, site_name: form.site_name.value.trim(),
+              site_address: form.site_address.value.trim(), router_name: form.router_name.value.trim(),
+              router_vendor: form.router_vendor.value, router_model: form.router_model.value.trim(),
+              integration_type: form.router_vendor.value === "mikrotik" ? "mikrotik_hotspot" : "other"
+            }) });
+            feedback.textContent = `Router registered. Payment pending: TSh 6,000/month. Router ID: ${created.device_id}`;
+            addRouterForm.reset();
+            await loadWorkspace();
+          } catch (error) { feedback.textContent = error.message; submit.disabled = false; }
+        });
+        info.append(addRouterButton, addRouterForm);
+      }
     } catch (error) {
       const routerInfo = document.createElement("small");
       routerInfo.textContent = "Router status unavailable: " + error.message;
@@ -602,6 +651,52 @@ async function loadPlatformAccounts() {
   } catch (error) {
     host.textContent = error.message;
   }
+}
+
+async function loadPlatformRouters() {
+  const host = $("platform-routers");
+  if (!host) return;
+  host.textContent = "Loading router subscriptions…";
+  try {
+    const routers = await api("/api/platform/admin/routers");
+    host.replaceChildren();
+    if (!routers.length) { host.textContent = "No routers registered yet."; return; }
+    routers.forEach((router) => {
+      const card = document.createElement("article"); card.className = "item";
+      const info = document.createElement("div");
+      const org = Array.isArray(router.organization) ? router.organization[0] : router.organization;
+      const site = Array.isArray(router.site) ? router.site[0] : router.site;
+      const raw = router.router_subscriptions;
+      const sub = Array.isArray(raw) ? raw[0] : raw;
+      const name = document.createElement("strong"); name.textContent = `${org?.name || "Business"} — ${router.name || router.model || "Router"}`;
+      const meta = document.createElement("small");
+      const status = sub?.status === "active" && sub.expires_at && new Date(sub.expires_at) > new Date() ? "ACTIVE" :
+        (sub?.status === "active" ? "EXPIRED" : String(sub?.status || "PENDING").toUpperCase());
+      meta.textContent = `${site?.name || "No site"} · ${router.vendor || "Unknown brand"} · ${org?.contact_phone || "No phone"} · ${status} · ${sub?.expires_at ? "Expires " + new Date(sub.expires_at).toLocaleDateString() : "Not yet approved"} · TSh 6,000/month`;
+      info.append(name, meta);
+      const controls = document.createElement("div"); controls.className = "stack";
+      const months = document.createElement("select"); months.setAttribute("aria-label","Router subscription months");
+      [1,2,3,6,12,24,36,60].forEach((n) => { const o=document.createElement("option"); o.value=String(n); o.textContent=n===1?"1 month":n+" months"; months.append(o); });
+      const method = document.createElement("select");
+      [["cash","Cash"],["mobile_money","Mobile money"],["bank_transfer","Bank transfer"],["other","Other"]].forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;method.append(o);});
+      const reference = document.createElement("input"); reference.placeholder="Payment reference (optional)"; reference.maxLength=120;
+      const approve = document.createElement("button"); approve.type="button"; approve.className="secondary"; approve.textContent="Approve router payment";
+      const message = document.createElement("small"); message.className="muted";
+      approve.addEventListener("click",async()=>{
+        const n=Number(months.value), total=n*6000;
+        if(!window.confirm(`Confirm ${org?.name || "this business"} paid TSh ${total.toLocaleString()} for this router for ${n} month(s)?`)) return;
+        approve.disabled=true; message.textContent="Approving router subscription…";
+        try {
+          const result=await api("/api/platform/admin/approve-router",{method:"POST",body:JSON.stringify({
+            device_id:router.id,payment_method:method.value,payment_reference:reference.value.trim()||null,months:n
+          })});
+          message.textContent="Approved until "+new Date(result.expires_at).toLocaleString();
+          await loadPlatformRouters(); await loadPlatformHealth();
+        } catch(error){message.textContent=error.message;approve.disabled=false;}
+      });
+      controls.append(months,method,reference,approve,message); card.append(info,controls); host.append(card);
+    });
+  } catch(error) { host.textContent=error.message; }
 }
 
 async function loadPackages(organizationId, role = "operator") {
