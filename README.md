@@ -11,7 +11,7 @@ EAM-WIFI is a multi-tenant Wi-Fi hotspot management application by EAM VENTURES.
 - A transaction-safe Supabase RPC creates the organization, owner membership, user profile, hotspot site, router record and organization settings together.
 - Organization membership and Wi-Fi package lookup, scoped by the authenticated user's RLS permissions.
 - Every owner/admin creates and edits their own packages (price, connected-time or wall-clock duration, validity, data cap, speed, max devices). Manual paid voucher issuance requires the exact package amount, records payment method and optional customer phone/reference, and issues one fresh globally unique one-time voucher code.
-- Platform subscription: each Wi-Fi business pays TSh 6,000 per month; registration remains pending until the platform administrator manually confirms payment and approves one month. Package access and voucher issuance are blocked when the subscription is pending or expired.
+- Platform access: business registration is free and remains pending until the Super Admin approves the account. Each router is billed independently at TSh 7,500 per month after its five-minute first-connection trial; approval of one router does not activate another. Voucher issuance is blocked for a router whose own subscription is pending or expired.
 - Customer portal: `/portal?site=<business-slug>` displays that business's contact number, payment number, instructions and active packages. The owner manually verifies payment to their own number, records it, and issues one voucher. Voucher redemption atomically consumes the voucher, returns one-time hotspot login credentials and queues a router event.
 - The Worker forwards the signed-in user's JWT and does not use a service-role key.
 - Private chat attachment bucket (`chat-attachments`) is provisioned as private, with participant-scoped Storage policies and a 15 MB file limit; the browser upload UI is not yet connected.
@@ -90,7 +90,7 @@ public/downloads/eam-wifi-agent-template.rsc  Unconfigured template personalized
 database/global_unique_voucher_generation.sql  Global unique voucher generator
 database/protect_redeemed_voucher_history.sql  Voucher history protection
 database/manual_paid_voucher_issue.sql  Manual paid-voucher issuance and sales ledger
-database/platform_monthly_subscription_approval.sql  TSh 6,000 monthly business subscription
+database/platform_monthly_subscription_approval.sql  legacy business-subscription workflow (not the current per-router billing flow)
 database/public_wifi_portal_and_atomic_voucher_redemption.sql  Public portal and atomic redemption
 docs/router-connection.md            Secure router pairing and operational checklist
 tests/worker.test.js                 Basic Worker request-validation tests
