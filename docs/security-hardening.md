@@ -10,6 +10,7 @@
 - Organization owners can update only the business contact phone directly. They cannot change the organization approval status or owner ID.
 - Signup password checks run in the Worker, not only in browser validation: minimum 12 characters with uppercase, lowercase, digit and symbol.
 - Router subscription price check, default and approval code all use TSh 7,500/month.
+- Business approval uses the free per-router billing path; the obsolete organization-wide approval RPC that wrote a TSh 6,000 business payment was revoked from `authenticated` and `anon`.
 - Router credentials are hashed before database lookup; router connections initiate outbound HTTPS and no router management port should be exposed publicly.
 
 ## Verification performed
