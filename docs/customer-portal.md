@@ -55,6 +55,6 @@ For the Hotspot server profile, enable the http-pap login method for this extern
 
 ## Platform subscription and support
 
-Every Wi-Fi business pays EAM-WIFI TSh 6,000 per month. New registrations remain pending until Super Admin confirms payment and activates the subscription. Platform billing contact: 0613794448. This is separate from each business's own customer payment number.
+Business registration is free and remains pending until Super Admin approves the account. Each router has its own five-minute trial starting at its first successful connection, then requires a separately approved TSh 7,500 monthly subscription. Approval of one router does not activate or extend another router. Platform billing contact: 0613794448. This is separate from each business's own customer payment number.
 
 Registered owners can send support messages and reply to Super Admin from the in-app Help/Support section. Super Admin can view the support inbox and reply in the platform dashboard.
