@@ -12,7 +12,7 @@ Use PayIn's official sandbox first:
 
 - Base URL: `https://api.sandbox.payin.co.tz/api/v1`
 - Sandbox dashboard: `https://sandbox.payin.co.tz`
-- Sandbox requests do not move real money.
+- Sandbox requests do not move real money; the provider documents free sandbox API keys.
 - Minimum collection amount documented by PayIn: TSh 100.
 - Collection endpoint: `POST /collection`
 - Idempotency header: `X-Idempotency-Key`
@@ -26,7 +26,7 @@ Configure secrets only in the Cloudflare Worker environment, never in GitHub sou
 - `PAYIN_API_BASE_URL` (sandbox URL while testing)
 - `PAYIN_CALLBACK_URL` (the HTTPS Worker webhook URL)
 
-Production base URL is `https://api.payin.co.tz/api/v1`; switch only after merchant onboarding, settlement details, charges, limits and live credentials have been confirmed with PayIn.
+Production base URL is `https://api.payin.co.tz/api/v1`. PayIn's published go-live checklist asks for merchant KYC documents including BRELA, TIN, ID and a bank statement, and says approval typically takes 24–48 hours. Confirm the exact documents and the account type accepted for EAM-WIFI directly with PayIn before relying on this timeline. Their public API reference does not provide a definitive transaction tariff; request the current collection fee, operator fee, settlement schedule and any minimums in writing. Do not assume production payments are free.
 
 ## Required customer flow
 
