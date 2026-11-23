@@ -285,3 +285,38 @@ test("MFA challenge forwards the selected factor and user session", async () => 
     assert.equal(JSON.parse(capturedBody).factor_id, "00000000-0000-0000-0000-000000000001");
   } finally { globalThis.fetch = originalFetch; }
 });
+
+
+test("business approval uses the free per-router billing path, not the legacy paid business subscription", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl = "";
+  let capturedBody = "";
+  globalThis.fetch = async (url, options = {}) => {
+    capturedUrl = String(url);
+    capturedBody = String(options.body || "");
+    return new Response(JSON.stringify({
+      organization_id: "00000000-0000-0000-0000-000000000001",
+      status: "active",
+      billing_model: "per_router"
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const organizationId = "00000000-0000-0000-0000-000000000001";
+    const response = await worker.fetch(new Request("https://example.test/api/platform/admin/approve", {
+      method: "POST",
+      headers: { authorization: "Bearer super-admin-session", "content-type": "application/json" },
+      body: JSON.stringify({ organization_id: organizationId, payment_method: "other", months: 1 })
+    }), {
+      SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test"
+    });
+    assert.equal(response.status, 200);
+    assert.equal(new URL(capturedUrl).pathname, "/rest/v1/rpc/platform_admin_approve_subscription_period");
+    const payload = JSON.parse(capturedBody);
+    assert.equal(payload.p_organization_id, organizationId);
+    assert.equal(payload.p_months, 1);
+    assert.equal(payload.p_payment_method, "other");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
