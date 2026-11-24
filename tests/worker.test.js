@@ -320,3 +320,42 @@ test("business approval uses the free per-router billing path, not the legacy pa
     globalThis.fetch = originalFetch;
   }
 });
+
+test("signup rejects a breached password using only the five-character hash prefix", async () => {
+  const originalFetch = globalThis.fetch;
+  const password = "ThisIsAReallyStrong!Password2026";
+  const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(password));
+  const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+  const prefix = hash.slice(0, 5), suffix = hash.slice(5);
+  let checkedUrl = "";
+  let supabaseCalled = false;
+  globalThis.fetch = async (url) => {
+    checkedUrl = String(url);
+    return new Response(suffix + ":12\\r\\n", { status: 200 });
+  };
+  try {
+    const response = await worker.fetch(new Request("https://example.test/api/auth/signup", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "test@example.com", password })
+    }), { SUPABASE_URL: "https://example.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test" });
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /data breaches/i);
+    assert.equal(checkedUrl, "https://api.pwnedpasswords.com/range/" + prefix);
+    assert.equal(checkedUrl.includes(password), false);
+    assert.equal(supabaseCalled, false);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("signup fails closed when the breached-password service is unavailable", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response("unavailable", { status: 503 }); };
+  try {
+    const response = await worker.fetch(new Request("https://example.test/api/auth/signup", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "test@example.com", password: "ThisIsAReallyStrong!Password2026" })
+    }), { SUPABASE_URL: "https://example.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test" });
+    assert.equal(response.status, 503);
+    assert.equal(calls, 1);
+  } finally { globalThis.fetch = originalFetch; }
+});
