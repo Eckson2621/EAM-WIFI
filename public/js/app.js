@@ -959,16 +959,15 @@ async function loadPlatformRouters() {
       meta.textContent = `${site?.name || "No site"} · ${router.vendor || "Unknown brand"} · ${org?.contact_phone || "No phone"} · ${status}${trialState} · ${sub?.expires_at ? "Expires " + new Date(sub.expires_at).toLocaleDateString() : "Not yet approved"} · TSh 7,500/month`;
       info.append(name, meta);
       const controls = document.createElement("div"); controls.className = "stack";
-      const months = document.createElement("select"); months.setAttribute("aria-label","Router subscription months");
-      [1,2,3,6,12,24,36,60].forEach((n) => { const o=document.createElement("option"); o.value=String(n); o.textContent=n===1?"1 month":n+" months"; months.append(o); });
+      const period = document.createElement("small"); period.textContent = "Billing period: 1 month · TSh 7,500 per router";
       const method = document.createElement("select");
       [["cash","Cash"],["mobile_money","Mobile money"],["bank_transfer","Bank transfer"],["other","Other"]].forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;method.append(o);});
       const reference = document.createElement("input"); reference.placeholder="Payment reference (optional)"; reference.maxLength=120;
       const approve = document.createElement("button"); approve.type="button"; approve.className="secondary"; approve.textContent="Approve router payment";
       const message = document.createElement("small"); message.className="muted";
       approve.addEventListener("click",async()=>{
-        const n=Number(months.value), total=n*7500;
-        if(!window.confirm(`Confirm ${org?.name || "this business"} paid TSh ${total.toLocaleString()} for this router for ${n} month(s)?`)) return;
+        const n=1, total=7500;
+        if(!window.confirm(`Confirm ${org?.name || "this business"} paid TSh 7,500 for this router for 1 month?`)) return;
         approve.disabled=true; message.textContent="Approving router subscription…";
         try {
           const result=await api("/api/platform/admin/approve-router",{method:"POST",body:JSON.stringify({
@@ -978,7 +977,7 @@ async function loadPlatformRouters() {
           await loadPlatformRouters(); await loadPlatformHealth();
         } catch(error){message.textContent=error.message;approve.disabled=false;}
       });
-      controls.append(months,method,reference,approve,message); card.append(info,controls); host.append(card);
+      controls.append(period,method,reference,approve,message); card.append(info,controls); host.append(card);
     });
   } catch(error) { host.textContent=error.message; }
 }
