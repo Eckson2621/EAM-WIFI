@@ -501,7 +501,7 @@ async function handleApi(request, env) {
     if (!/^[0-9a-f-]{36}$/i.test(String(input.device_id || ""))) return json({ error: "A valid device_id is required." }, 400);
     if (!["cash","mobile_money","bank_transfer","other"].includes(input.payment_method)) return json({ error: "Select a valid payment method." }, 400);
     const months = Number(input.months || 1);
-    if (!Number.isInteger(months) || months < 1 || months > 60) return json({ error: "Subscription duration must be from 1 to 60 months." }, 400);
+    if (months !== 1) return json({ error: "Router payments are approved one month at a time: TSh 7,500 per router." }, 400);
     const upstream = await supabaseFetch(env, "/rest/v1/rpc/platform_admin_approve_router_subscription", {
       method: "POST",
       body: JSON.stringify({ p_device_id: input.device_id, p_payment_method: input.payment_method,
