@@ -331,7 +331,7 @@ test("signup rejects a breached password using only the five-character hash pref
   let supabaseCalled = false;
   globalThis.fetch = async (url) => {
     checkedUrl = String(url);
-    return new Response(suffix + ":12\\r\\n", { status: 200 });
+    return new Response(suffix + ":12\r\n", { status: 200 });
   };
   try {
     const response = await worker.fetch(new Request("https://example.test/api/auth/signup", {
