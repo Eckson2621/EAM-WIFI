@@ -40,7 +40,7 @@ async function isCompromisedPassword(password) {
     headers: { "Add-Padding": "true", "User-Agent": "EAM-WIFI-password-security" }
   });
   if (!response.ok) throw new Error("Password security check is temporarily unavailable.");
-  const entries = (await response.text()).split(/\\r?\\n/);
+  const entries = (await response.text()).split(/\r?\n/);
   return entries.some(line => {
     const [candidate, count] = line.trim().split(":");
     return candidate?.toUpperCase() === suffix && Number(count) > 0;
