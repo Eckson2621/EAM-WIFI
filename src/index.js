@@ -30,6 +30,23 @@ async function proxyAuth(request, env, path) {
   });
 }
 
+async function isCompromisedPassword(password) {
+  const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(password));
+  const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
+  const prefix = hash.slice(0, 5);
+  const suffix = hash.slice(5);
+  // Pwned Passwords k-anonymity: only the first five SHA-1 characters leave this Worker.
+  const response = await fetch("https://api.pwnedpasswords.com/range/" + prefix, {
+    headers: { "Add-Padding": "true", "User-Agent": "EAM-WIFI-password-security" }
+  });
+  if (!response.ok) throw new Error("Password security check is temporarily unavailable.");
+  const entries = (await response.text()).split(/\\r?\\n/);
+  return entries.some(line => {
+    const [candidate, count] = line.trim().split(":");
+    return candidate?.toUpperCase() === suffix && Number(count) > 0;
+  });
+}
+
 async function proxyAuthenticatedAuth(request, env, path, bodyOverride) {
   const token = getToken(request);
   if (!token) return json({ error: "Authentication required." }, 401);
@@ -95,6 +112,13 @@ async function handleApi(request, env) {
     const password = String(input.password || "");
     if (password.length < 12 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
       return json({ error: "Use a password with at least 12 characters, including uppercase, lowercase, a number and a symbol." }, 400);
+    }
+    try {
+      if (await isCompromisedPassword(password)) {
+        return json({ error: "This password has appeared in known data breaches. Choose a different password." }, 400);
+      }
+    } catch {
+      return json({ error: "Password security check is temporarily unavailable. Please try again shortly." }, 503);
     }
     return proxyAuth(request, env, "/auth/v1/signup");
   }
