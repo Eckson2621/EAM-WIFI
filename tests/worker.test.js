@@ -367,6 +367,10 @@ test("public router adapter catalogue exposes honest integration readiness witho
   const body = await response.json();
   assert.ok(Array.isArray(body.adapters));
   assert.ok(Array.isArray(body.vendors));
+  assert.deepEqual(Object.keys(body.integrations).sort(), ["huawei", "tp_link", "ubiquiti"]);
+  assert.deepEqual(body.integrations.ubiquiti.integrations.map((item) => item.id), ["unifi_controller", "radius"]);
+  assert.deepEqual(body.integrations.tp_link.integrations.map((item) => item.id), ["omada_controller", "radius"]);
+  assert.deepEqual(body.integrations.huawei.integrations.map((item) => item.id), ["radius", "controller_api"]);
   const mikrotik = body.adapters.find((item) => item.id === "mikrotik-routeros-agent");
   const radius = body.adapters.find((item) => item.id === "radius");
   const portal = body.adapters.find((item) => item.id === "external-portal");
