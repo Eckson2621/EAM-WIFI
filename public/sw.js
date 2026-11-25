@@ -1,5 +1,5 @@
-const CACHE_NAME = 'eam-wifi-pwa-shell-v1';
-const CORE = ['/', '/manifest.webmanifest', '/icons/icon.svg', '/icons/logo.svg'];
+const CACHE_NAME = 'eam-wifi-pwa-shell-v2';
+const CORE = ['/', '/manifest.webmanifest', '/icons/icon.svg', '/icons/logo.svg', '/pwa-install.js'];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
