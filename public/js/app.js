@@ -283,7 +283,7 @@ function createRouterPaymentNotice(router) {
   const heading = document.createElement("strong");
   heading.textContent = trialRunning ? "Router trial is running · Jaribio linaendelea" : trialStarted ? "Trial ended · Muda wa majaribio umeisha" : "5-minute router test · Jaribio la dakika 5";
   const detail = document.createElement("p");
-  detail.textContent = trialRunning ? "Una muda wa kujaribu muunganisho. Baada ya hapo router itafungwa mpaka malipo yathibitishwe." : trialStarted ? "Router imefungwa. Lipa TSh 7,500/= kisha piga simu au tuma SMS kwa Super Admin." : "Dakika 5 za majaribio zitaanza router itakapounganishwa kwa mara ya kwanza. Baada ya hapo lipa TSh 7,500/= kwa router.";
+  detail.textContent = trialRunning ? "Una muda wa kujaribu muunganisho. Baada ya hapo router itafungwa mpaka malipo yathibitishwe." : trialStarted ? "Router imefungwa. Lipa TSh 7,500/= kupitia Airtel Lipa namba 653740570, jina ECKSON AMULIKE MWAMPAJA, kisha hifadhi TxID kwa uthibitisho." : "Dakika 5 za majaribio zitaanza router itakapounganishwa kwa mara ya kwanza. Baada ya hapo lipa TSh 7,500/= kwa router kupitia Airtel Lipa namba 653740570, jina ECKSON AMULIKE MWAMPAJA.";
   const price = document.createElement("strong"); price.textContent = "LIPA TSh 7,500/= kwa router";
   const phone = document.createElement("p"); phone.textContent = "Airtel Lipa: " + PLATFORM_LIPA_NUMBER + " · Jina la mpokeaji: " + PLATFORM_LIPA_NAME + ". Hifadhi TxID kwa uthibitisho wa Super Admin.";
 
