@@ -262,7 +262,10 @@ function setMode(nextMode) {
 function saveSession(value) {
   session = value;
   if (value) sessionStorage.setItem("eamwifi_session", JSON.stringify(value));
-  else sessionStorage.removeItem("eamwifi_session");
+  else {
+    sessionStorage.removeItem("eamwifi_session");
+    if (window.EAMChat?.stop) window.EAMChat.stop();
+  }
 }
 
 const PLATFORM_CONTACT_PHONE = "0613794448";
