@@ -481,10 +481,64 @@ async function handleApi(request, env) {
     }
     return json(conversation, 201);
   }
+  if (path === "/api/chat/attachments" && request.method === "POST") {
+    if (!token) return json({ error: "Authentication required." }, 401);
+    let form;
+    try { form = await request.formData(); } catch { return json({ error: "Choose a file to attach." }, 400); }
+    const conversationId = String(form.get("conversation_id") || "");
+    const file = form.get("file");
+    const caption = String(form.get("body") || "").trim().slice(0, 1000);
+    if (!/^[0-9a-f-]{36}$/i.test(conversationId)) return json({ error: "A valid conversation is required." }, 400);
+    if (!(file instanceof File) || file.size < 1 || file.size > 15 * 1024 * 1024) return json({ error: "Choose a file between 1 byte and 15 MB." }, 400);
+    const allowed = new Set(["image/jpeg","image/png","image/webp","image/gif","application/pdf"]);
+    if (!allowed.has(file.type)) return json({ error: "Only JPG, PNG, WEBP, GIF and PDF files are allowed." }, 415);
+    const authResponse = await supabaseFetch(env, "/auth/v1/user", { method: "GET" }, token);
+    if (!authResponse.ok) return json({ error: "Your session has expired. Sign in again." }, 401);
+    const authUser = await authResponse.json();
+    const safeName = (file.name || "attachment").normalize("NFKC").replace(/[^A-Za-z0-9._-]/g, "_").slice(-180) || "attachment";
+    const objectPath = conversationId + "/" + authUser.id + "/" + crypto.randomUUID() + "-" + safeName;
+    const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+    const uploaded = await supabaseFetch(env, "/storage/v1/object/chat-attachments/" + encodedPath, {
+      method: "POST", headers: { "content-type": file.type, "x-upsert": "false" }, body: await file.arrayBuffer()
+    }, token);
+    if (!uploaded.ok) return new Response(await uploaded.text(), { status: uploaded.status, headers: JSON_HEADERS });
+    const messageType = file.type.startsWith("image/") ? "image" : "file";
+    const inserted = await supabaseFetch(env, "/rest/v1/chat_messages?select=id,conversation_id,sender_id,message_type,body,media_path,attachment_name,attachment_mime_type,attachment_size_bytes,created_at", {
+      method: "POST", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        conversation_id: conversationId, sender_id: authUser.id, message_type: messageType,
+        body: caption || null, media_path: objectPath, attachment_name: safeName,
+        attachment_mime_type: file.type, attachment_size_bytes: file.size
+      })
+    }, token);
+    const insertedText = await inserted.text();
+    if (!inserted.ok) {
+      await supabaseFetch(env, "/storage/v1/object/chat-attachments/" + encodedPath, { method: "DELETE" }, token);
+      return new Response(insertedText, { status: inserted.status, headers: JSON_HEADERS });
+    }
+    return new Response(insertedText, { status: 201, headers: JSON_HEADERS });
+  }
+  if (path === "/api/chat/attachment" && request.method === "GET") {
+    if (!token) return json({ error: "Authentication required." }, 401);
+    const objectPath = String(url.searchParams.get("path") || "");
+    const match = objectPath.match(/^([0-9a-f-]{36})\/([0-9a-f-]{36})\/([A-Za-z0-9._-]{1,220})$/i);
+    if (!match) return json({ error: "Invalid attachment path." }, 400);
+    const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+    const signed = await supabaseFetch(env, "/storage/v1/object/sign/chat-attachments/" + encodedPath, {
+      method: "POST", body: JSON.stringify({ expiresIn: 3600 })
+    }, token);
+    const signedText = await signed.text();
+    if (!signed.ok) return new Response(signedText, { status: signed.status, headers: JSON_HEADERS });
+    const signedData = JSON.parse(signedText || "{}");
+    const signedPath = signedData.signedURL || signedData.signedUrl;
+    if (!signedPath) return json({ error: "Could not create a secure attachment link." }, 502);
+    const absoluteUrl = signedPath.startsWith("http") ? signedPath : env.SUPABASE_URL.replace(/\/$/, "") + "/storage/v1" + (signedPath.startsWith("/") ? signedPath : "/" + signedPath);
+    return json({ url: absoluteUrl, expires_in: 3600 });
+  }
   if (path === "/api/chat/messages" && request.method === "GET") {
     const conversationId = String(url.searchParams.get("conversation_id") || "");
     if (!/^[0-9a-f-]{36}$/i.test(conversationId)) return json({ error: "A valid conversation is required." }, 400);
-    const query = new URLSearchParams({ select: "id,conversation_id,sender_id,message_type,body,created_at,edited_at,deleted_at", conversation_id: `eq.${conversationId}`, order: "created_at.asc", limit: "200" });
+    const query = new URLSearchParams({ select: "id,conversation_id,sender_id,message_type,body,media_path,attachment_name,attachment_mime_type,attachment_size_bytes,created_at,edited_at,deleted_at", conversation_id: `eq.${conversationId}`, order: "created_at.asc", limit: "200" });
     const upstream = await supabaseFetch(env, `/rest/v1/chat_messages?${query}`, { method: "GET" }, token);
     return new Response(await upstream.text(), { status: upstream.status, headers: JSON_HEADERS });
   }
