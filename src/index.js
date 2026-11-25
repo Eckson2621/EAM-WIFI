@@ -1,3 +1,5 @@
+import { listRouterAdapters } from "./router-adapters.js";
+
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 
 function json(data, status = 200) {
@@ -63,6 +65,10 @@ async function proxyAuthenticatedAuth(request, env, path, bodyOverride) {
 async function handleApi(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
+
+  if (request.method === "GET" && path === "/api/router-adapters") {
+    return json({ adapters: listRouterAdapters() });
+  }
 
   if (request.method === "GET" && path === "/api/health") {
     const supabaseConfigured = Boolean(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY);
