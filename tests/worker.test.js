@@ -366,11 +366,14 @@ test("public router adapter catalogue exposes honest integration readiness witho
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.ok(Array.isArray(body.adapters));
+  assert.ok(Array.isArray(body.vendors));
   const mikrotik = body.adapters.find((item) => item.id === "mikrotik-routeros-agent");
   const radius = body.adapters.find((item) => item.id === "radius");
   const portal = body.adapters.find((item) => item.id === "external-portal");
   assert.equal(mikrotik.status, "pilot");
   assert.equal(radius.status, "planned");
   assert.equal(portal.status, "limited");
+  assert.equal(body.vendors.find((item) => item.vendor === "tp_link").status, "planned");
+  assert.equal(body.vendors.find((item) => item.vendor === "other").status, "assessment_required");
   assert.ok(!JSON.stringify(body).toLowerCase().includes("secret"));
 });
