@@ -277,7 +277,7 @@
     "Welcome to EAM-WIFI · Karibu EAM-WIFI":"Karibu EAM-WIFI",
     "Quick instructions for the main features. / Maelekezo mafupi ya vipengele muhimu.":"Maelekezo mafupi ya kutumia vipengele vikuu vya mfumo.",
     "Account and business · Akaunti na biashara":"Akaunti na biashara",
-    "Subscription approval · Idhini ya usajili":"Idhini ya malipo ya usajili",
+    "Subscription approval · Idhini ya usajili":"Idhini ya malipo ya usajili",\n    "Business registration is free; the Super Admin approves the business account. Each router gets a 5-minute test when it first connects. After the test, pay TSh 7,500 per router using Airtel Lipa 653740570, recipient ECKSON AMULIKE MWAMPAJA. Keep the transaction ID (TxID) for Super Admin verification. Support calls/SMS/WhatsApp only: 0613794448. / Usajili wa biashara ni bure; Msimamizi Mkuu ndiye anayeidhinisha akaunti. Kila router hupewa jaribio la dakika 5 inapounganishwa mara ya kwanza. Baada ya hapo lipa TSh 7,500 kwa kila router kupitia Airtel Lipa 653740570, jina ECKSON AMULIKE MWAMPAJA. Hifadhi TxID kwa uthibitisho wa Msimamizi Mkuu. Mawasiliano ya msaada kwa simu/SMS/WhatsApp pekee: 0613794448.":"Usajili wa biashara ni bure; Msimamizi Mkuu ndiye anayeidhinisha akaunti. Kila router hupewa jaribio la dakika 5 inapounganishwa mara ya kwanza. Baada ya hapo lipa TSh 7,500 kwa kila router kupitia Airtel Lipa 653740570, jina ECKSON AMULIKE MWAMPAJA. Hifadhi TxID kwa uthibitisho wa Msimamizi Mkuu. Mawasiliano ya msaada kwa simu/SMS/WhatsApp pekee: 0613794448.",
     "Packages and vouchers · Vifurushi na vocha":"Vifurushi na vocha",
     "Customer Wi-Fi portal · Tovuti ya mteja":"Tovuti ya Wi-Fi ya mteja",
     "Router tools · Zana za router":"Zana za router",
