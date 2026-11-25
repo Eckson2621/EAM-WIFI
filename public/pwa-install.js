@@ -4,7 +4,21 @@
   const BG = "#101b33";
   const boot = () => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
-      navigator.serviceWorker.register('/sw.js').catch(error => console.warn(APP_NAME + ' service worker:', error));
+      navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(registration => {
+        const checkForUpdates = () => registration.update().catch(() => {});
+        checkForUpdates();
+        window.addEventListener('online', checkForUpdates);
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) {
+            if (window.__eamPwaUpdatePending) { window.location.reload(); return; }
+            checkForUpdates();
+          }
+        });
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          // Finish the current action first; refresh automatically on the next app foreground.
+          window.__eamPwaUpdatePending = true;
+        });
+      }).catch(error => console.warn(APP_NAME + ' service worker:', error));
     }
     const workspaceStyle = document.createElement('style');
     workspaceStyle.textContent = '.eam-wifi-workspace-active .topbar > .brand{display:none!important}';
