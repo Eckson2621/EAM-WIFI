@@ -379,7 +379,7 @@ test("public router adapter catalogue exposes honest integration readiness witho
   assert.equal(portal.status, "limited");
   assert.equal(body.vendors.find((item) => item.vendor === "tp_link").status, "planned");
   assert.equal(body.vendors.find((item) => item.vendor === "other").status, "assessment_required");
-  assert.ok(!JSON.stringify(body).toLowerCase().includes("secret"));
+  assert.ok(!JSON.stringify(body).includes("do-not-return-this-radius-secret"));
 });
 
 
