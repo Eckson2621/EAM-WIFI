@@ -8,23 +8,23 @@ const OPTIONS = Object.freeze({
     vendor: "ubiquiti",
     label: "Ubiquiti",
     integrations: Object.freeze([
-      Object.freeze({ id: "unifi_controller", label: "UniFi Network Controller", transport: "controller_api", status: "configuration_ready", required: ["controller_url", "controller_version", "site_id"], credential_fields: ["api_username", "api_password_or_token"], notes: "Use a UniFi Network application/controller with an API enabled for the installed version. UniFi gateways/APs and UISP-managed devices are not interchangeable." }),
-      Object.freeze({ id: "radius", label: "External RADIUS", transport: "radius", status: "configuration_ready", required: ["radius_server", "radius_auth_port", "radius_accounting_port", "shared_secret"], credential_fields: ["shared_secret"], notes: "Requires the exact UniFi model, firmware and WLAN/hotspot profile to support the required RADIUS attributes and accounting." })
+      Object.freeze({ id: "unifi_controller", label: "UniFi Network Controller", transport: "controller_api", status: "setup_contract_only", required: ["controller_url", "controller_version", "site_id"], credential_fields: ["api_username", "api_password_or_token"], notes: "Use a UniFi Network application/controller with an API enabled for the installed version. UniFi gateways/APs and UISP-managed devices are not interchangeable." }),
+      Object.freeze({ id: "radius", label: "External RADIUS", transport: "radius", status: "setup_contract_only", required: ["radius_server", "radius_auth_port", "radius_accounting_port", "shared_secret"], credential_fields: ["shared_secret"], notes: "Requires the exact UniFi model, firmware and WLAN/hotspot profile to support the required RADIUS attributes and accounting." })
     ])
   }),
   tp_link: Object.freeze({
     vendor: "tp_link",
     label: "TP-Link",
     integrations: Object.freeze([
-      Object.freeze({ id: "omada_controller", label: "Omada Software/Hardware Controller", transport: "controller_api", status: "configuration_ready", required: ["controller_url", "controller_version", "site_id"], credential_fields: ["api_username", "api_password_or_token"], notes: "Requires a compatible Omada controller and supported EAP/ gateway model. Standalone home routers are not covered by this integration." }),
-      Object.freeze({ id: "radius", label: "External RADIUS", transport: "radius", status: "configuration_ready", required: ["radius_server", "radius_auth_port", "radius_accounting_port", "shared_secret"], credential_fields: ["shared_secret"], notes: "Requires an Omada-compatible or other TP-Link model/firmware with external RADIUS authentication and accounting." })
+      Object.freeze({ id: "omada_controller", label: "Omada Software/Hardware Controller", transport: "controller_api", status: "setup_contract_only", required: ["controller_url", "controller_version", "site_id"], credential_fields: ["api_username", "api_password_or_token"], notes: "Requires a compatible Omada controller and supported EAP/ gateway model. Standalone home routers are not covered by this integration." }),
+      Object.freeze({ id: "radius", label: "External RADIUS", transport: "radius", status: "setup_contract_only", required: ["radius_server", "radius_auth_port", "radius_accounting_port", "shared_secret"], credential_fields: ["shared_secret"], notes: "Requires an Omada-compatible or other TP-Link model/firmware with external RADIUS authentication and accounting." })
     ])
   }),
   huawei: Object.freeze({
     vendor: "huawei",
     label: "Huawei",
     integrations: Object.freeze([
-      Object.freeze({ id: "radius", label: "External RADIUS / AAA", transport: "radius", status: "configuration_ready", required: ["radius_server", "radius_auth_port", "radius_accounting_port", "shared_secret"], credential_fields: ["shared_secret"], notes: "Most suitable generic path where the exact Huawei WLAN/AC/ONT firmware exposes RADIUS/AAA and accounting. Vendor-specific attributes and CoA/disconnect must be verified." }),
+      Object.freeze({ id: "radius", label: "External RADIUS / AAA", transport: "radius", status: "setup_contract_only", required: ["radius_server", "radius_auth_port", "radius_accounting_port", "shared_secret"], credential_fields: ["shared_secret"], notes: "Most suitable generic path where the exact Huawei WLAN/AC/ONT firmware exposes RADIUS/AAA and accounting. Vendor-specific attributes and CoA/disconnect must be verified." }),
       Object.freeze({ id: "controller_api", label: "Huawei Controller/API", transport: "controller_api", status: "model_assessment_required", required: ["controller_url", "controller_family", "controller_version"], credential_fields: ["api_username", "api_password_or_token"], notes: "Huawei controller and device APIs vary by product family; confirm exact AC, eSight/iMaster, gateway or ONT model before enabling." })
     ])
   })
@@ -41,7 +41,7 @@ export function listVendorIntegrationOptions(vendor) {
 /**
  * Validate non-secret connection metadata before a customer submits it.
  * Credentials must be sent to a dedicated encrypted secret store; this
- * function intentionally never accepts or returns credential values.
+ * function never returns credential values.
  */
 export function validateRouterIntegrationConfig(vendor, integrationId, config = {}) {
   const entry = OPTIONS[String(vendor || "").toLowerCase()];
