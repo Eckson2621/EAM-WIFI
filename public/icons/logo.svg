@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="180" viewBox="0 0 760 180">
+<g transform="translate(0 -4) scale(.34)"><path d="M256 78 414 170v172l-158 92-158-92V170z" fill="none" stroke="#22d3ee" stroke-width="24" stroke-linejoin="round"/><path d="M256 142 356 200v112l-100 58-100-58V200z" fill="none" stroke="#fff" stroke-width="20" stroke-linejoin="round"/><path d="M256 210 302 236v52l-46 27-46-27v-52z" fill="#22d3ee"/><path d="M256 236v54" stroke="#101b33" stroke-width="12" stroke-linecap="round"/></g>
+<text x="190" y="88" fill="#101b33" font-family="Arial,sans-serif" font-size="54" font-weight="800" letter-spacing="1">EAM-WIFI</text>
+<text x="192" y="124" fill="#101b33" opacity=".72" font-family="Arial,sans-serif" font-size="17" letter-spacing="2">EAM-WIFI HOTSPOT MANAGEMENT</text>
+</svg>
