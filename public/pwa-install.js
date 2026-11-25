@@ -6,6 +6,20 @@
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('/sw.js').catch(error => console.warn(APP_NAME + ' service worker:', error));
     }
+    const workspaceStyle = document.createElement('style');
+    workspaceStyle.textContent = '.eam-wifi-workspace-active .topbar > .brand{display:none!important}';
+    document.head.appendChild(workspaceStyle);
+    const syncWorkspaceBrand = () => {
+      const dashboard = document.getElementById('dashboard');
+      const admin = document.getElementById('platform-admin');
+      const active = !!((dashboard && !dashboard.classList.contains('hidden')) || (admin && !admin.classList.contains('hidden')));
+      document.body.classList.toggle('eam-wifi-workspace-active', active);
+    };
+    ['dashboard','platform-admin'].forEach(id => {
+      const node = document.getElementById(id);
+      if (node) new MutationObserver(syncWorkspaceBrand).observe(node, { attributes:true, attributeFilter:['class'] });
+    });
+    syncWorkspaceBrand();
     if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) return;
     document.querySelectorAll('.brand, .admin-brand').forEach(node => {
       if (node.querySelector('.pwa-brand-icon')) return;
