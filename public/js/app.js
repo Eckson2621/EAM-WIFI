@@ -1,3 +1,19 @@
+// EAM-WIFI global dark theme; preference is shared across every screen.
+(function initTheme(){
+  const saved = localStorage.getItem("eamwifi_theme");
+  document.documentElement.dataset.theme = saved === "light" ? "light" : "dark";
+  document.addEventListener("DOMContentLoaded", () => {
+    const button = document.getElementById("theme-toggle");
+    const sync = () => { if (button) button.textContent = document.documentElement.dataset.theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode"; };
+    sync();
+    button?.addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem("eamwifi_theme", next);
+      sync();
+    });
+  });
+})();
 const $ = (id) => document.getElementById(id);
 let mode = "signin";
 let session = null;
