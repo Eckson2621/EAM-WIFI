@@ -9,6 +9,7 @@
   let realtimeClient = null;
   let realtimeChannel = null;
   let realtimeConversationId = null;
+  let realtimeAccessToken = null;
   let realtimeStatus = "DISCONNECTED";
   let realtimeRefreshQueued = false;
 
@@ -164,6 +165,7 @@
     sub.textContent = typeLabel + " · Messages are protected by participant-level access rules.";
     $("chat-thread-head").append(title, sub);
     $("chat-message-input").disabled = false;
+    $("chat-attachment-input").disabled = false;
     $("chat-send").disabled = false;
     await loadConversations();
     await loadMessages();
@@ -175,13 +177,14 @@
     const saved = sessionStorage.getItem("eamwifi_session");
     const session = saved ? JSON.parse(saved) : null;
     if (!session?.access_token) return;
-    if (realtimeConversationId === conversationId && realtimeChannel && realtimeStatus === "SUBSCRIBED") return;
+    if (realtimeConversationId === conversationId && realtimeAccessToken === session.access_token && realtimeChannel && realtimeStatus === "SUBSCRIBED") return;
     if (realtimeClient && realtimeChannel) {
       try { await realtimeClient.removeChannel(realtimeChannel); } catch { /* reconnect below */ }
     }
     realtimeClient = null;
     realtimeChannel = null;
     realtimeConversationId = conversationId;
+    realtimeAccessToken = session.access_token;
     realtimeStatus = "CONNECTING";
     try {
       const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.99.1/+esm");
@@ -295,6 +298,7 @@
   }
 
   async function start(user, userMemberships) {
+    if (currentUser && user && currentUser.id !== user.id) await stopRealtime();
     currentUser = user;
     memberships = Array.isArray(userMemberships) ? userMemberships : [];
     const isAdmin = (user.email || "").toLowerCase() === "mwalimueckson2104@gmail.com";
@@ -324,6 +328,7 @@
         $("chat-thread-head").innerHTML = "<strong>Select a conversation</strong>";
         $("chat-messages").textContent = "Your messages will appear here.";
         $("chat-message-input").disabled = true;
+        $("chat-attachment-input").disabled = true;
         $("chat-send").disabled = true;
       }
     } catch (error) {
@@ -331,11 +336,24 @@
     }
     if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = setInterval(async () => {
-      if (!document.hidden && currentUser) {
+      if (!document.hidden && currentUser && realtimeStatus !== "SUBSCRIBED") {
         try { await loadConversations(); if (activeConversation) await loadMessages(); } catch { /* transient network issue */ }
       }
     }, 45000);
   }
 
-  window.EAMChat = { start };
+  async function stopRealtime() {
+    if (realtimeClient && realtimeChannel) {
+      try { await realtimeClient.removeChannel(realtimeChannel); } catch { /* already disconnected */ }
+    }
+    realtimeClient = null;
+    realtimeChannel = null;
+    realtimeConversationId = null;
+    realtimeAccessToken = null;
+    realtimeStatus = "DISCONNECTED";
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+
+  window.EAMChat = { start, stop: stopRealtime };
 })();
