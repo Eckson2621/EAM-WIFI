@@ -381,3 +381,29 @@ test("public router adapter catalogue exposes honest integration readiness witho
   assert.equal(body.vendors.find((item) => item.vendor === "other").status, "assessment_required");
   assert.ok(!JSON.stringify(body).toLowerCase().includes("secret"));
 });
+
+
+test("router integration validation requires an authenticated business session", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/router/integration/validate", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ vendor: "huawei", integration_id: "radius", config: {} })
+  }), {});
+  assert.equal(response.status, 401);
+});
+
+test("router integration validation checks config without echoing credentials or claiming it was saved", async () => {
+  const secret = "never-echo-this-radius-secret";
+  const response = await worker.fetch(new Request("https://example.test/api/router/integration/validate", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: "Bearer authenticated-test-session" },
+    body: JSON.stringify({
+      vendor: "huawei", integration_id: "radius",
+      config: { radius_server: "10.0.0.10", radius_auth_port: 1812, radius_accounting_port: 1813, shared_secret: secret }
+    })
+  }), {});
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.saved, false);
+  assert.equal(JSON.stringify(body).includes(secret), false);
+});
