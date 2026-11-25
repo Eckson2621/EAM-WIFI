@@ -37,6 +37,17 @@ Adapters must declare capabilities explicitly. The platform must block an operat
 
 Planned adapters must not be labelled supported in customer-facing screens.
 
+## Vendor integration setup contracts (implemented catalogue)
+
+The public `/api/router-adapters` catalogue now exposes explicit setup paths for:
+- **Ubiquiti:** UniFi Network Controller API or external RADIUS.
+- **TP-Link:** Omada Software/Hardware Controller API or external RADIUS. Standalone consumer routers are excluded from the Omada path.
+- **Huawei:** external RADIUS/AAA as the generic route; a Huawei controller/API path remains model-family assessment required.
+
+The onboarding form loads these choices from the catalogue instead of presenting a generic MikroTik integration for every brand. The Worker also provides a metadata validator for required controller/RADIUS fields, HTTPS-only controller URLs, and valid RADIUS ports. It deliberately does not store or echo secrets.
+
+Important release boundary: these are implemented configuration contracts and onboarding choices, **not live vendor drivers**. No vendor is marked production-supported and automatic voucher activation remains disabled until a real controller/device, credentials, firmware, RADIUS attributes, accounting, disconnect/CoA and captive-portal flow pass hardware acceptance tests. The application currently has no secure controller-credential vault or outbound controller agent; do not enter controller passwords into public fields or browser storage.
+
 ## Customer purchase and access flow
 1. The client joins the Wi-Fi network.
 2. The router/controller redirects the client to the business-specific portal.
