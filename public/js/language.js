@@ -1,5 +1,12 @@
 (() => {
   const translations = {
+    "Attach file":"Ambatisha faili",
+    "Images or PDF · Maximum 15 MB per file.":"Picha au PDF · Kiwango cha juu MB 15 kwa kila faili.",
+    "Uploading attachment…":"Inatuma faili…",
+    "Attachment unavailable or your access has expired.":"Faili halipatikani au ruhusa yako imeisha.",
+    "Open attachment":"Fungua faili",
+    "Attachment must not exceed 15 MB.":"Faili lisizidi MB 15.",
+    "Only JPG, PNG, WEBP, GIF and PDF files are allowed.":"Faili za JPG, PNG, WEBP, GIF na PDF pekee ndizo zinaruhusiwa.",
     "Wi-Fi Hotspot Management":"Usimamizi wa Hotspot za Wi-Fi",
     "Language":"Lugha",
     "Router trial is running · Jaribio linaendelea":"Jaribio la router linaendelea",
