@@ -1,5 +1,5 @@
 import { listRouterAdapters, listRouterVendorProfiles } from "./router-adapters.js";
-import { listVendorIntegrationOptions } from "./router-adapter-contract.js";
+import { listVendorIntegrationOptions, validateRouterIntegrationConfig } from "./router-adapter-contract.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 
@@ -69,6 +69,18 @@ async function handleApi(request, env) {
 
   if (request.method === "GET" && path === "/api/router-adapters") {
     return json({ adapters: listRouterAdapters(), vendors: listRouterVendorProfiles(), integrations: { ubiquiti: listVendorIntegrationOptions("ubiquiti"), tp_link: listVendorIntegrationOptions("tp_link"), huawei: listVendorIntegrationOptions("huawei") } });
+  }
+
+  if (path === "/api/router/integration/validate" && request.method === "POST") {
+    if (!getToken(request)) return json({ error: "Authentication required." }, 401);
+    let input;
+    try { input = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
+    const vendor = String(input.vendor || "").toLowerCase();
+    const integrationId = String(input.integration_id || "");
+    const config = input.config && typeof input.config === "object" && !Array.isArray(input.config) ? input.config : {};
+    const result = validateRouterIntegrationConfig(vendor, integrationId, config);
+    // Validation only: credentials are never persisted, logged, or echoed by this endpoint.
+    return json({ ...result, saved: false, message: "Configuration validation only. Secure credential storage and a live device driver are not enabled yet." }, result.ok ? 200 : 400);
   }
 
   if (request.method === "GET" && path === "/api/health") {
