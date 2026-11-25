@@ -1397,6 +1397,7 @@ $("platform-signout").addEventListener("click", signOut);
 async function loadRouterCompatibilityNotice() {
   const notice = $("router-compatibility-status");
   const vendorSelect = document.querySelector('#business-onboarding select[name="router_vendor"]');
+  const integrationSelect = document.querySelector('#business-onboarding select[name="integration_type"]');
   if (!notice || !vendorSelect) return;
   let profiles = [];
   const fallback = {
@@ -1407,6 +1408,12 @@ async function loadRouterCompatibilityNotice() {
     other: "Compatibility assessment required. Exact manufacturer, model, firmware and hotspot/controller details are needed."
   };
   const update = () => {
+    if (integrationSelect) {
+      const mikrotikOption = integrationSelect.querySelector('option[value="mikrotik_hotspot"]');
+      if (mikrotikOption) mikrotikOption.hidden = vendorSelect.value !== "mikrotik";
+      if (vendorSelect.value !== "mikrotik" && integrationSelect.value === "mikrotik_hotspot") integrationSelect.value = "other";
+      if (vendorSelect.value === "mikrotik" && integrationSelect.value === "other") integrationSelect.value = "mikrotik_hotspot";
+    }
     const profile = profiles.find((item) => item.vendor === vendorSelect.value);
     if (!profile) {
       notice.textContent = fallback[vendorSelect.value] || fallback.other;
