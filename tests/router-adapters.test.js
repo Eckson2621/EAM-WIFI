@@ -4,6 +4,7 @@ import {
   getRouterAdapter,
   isRouterAdapterProvisioningReady,
   listRouterAdapters,
+  listRouterVendorProfiles,
   supportsRouterCapability
 } from "../src/router-adapters.js";
 
@@ -32,4 +33,13 @@ test("MikroTik pilot does not claim production readiness", () => {
 test("returned adapter data cannot mutate internal capabilities", () => {
   getRouterAdapter("mikrotik-routeros-agent").capabilities.push("invented");
   assert.equal(supportsRouterCapability("mikrotik-routeros-agent", "invented"), false);
+});
+
+test("vendor profiles clearly separate pilot, planned and assessment-required devices", () => {
+  const vendors = listRouterVendorProfiles();
+  assert.deepEqual(vendors.map((item) => item.vendor), ["mikrotik", "ubiquiti", "tp_link", "huawei", "other"]);
+  assert.equal(vendors.find((item) => item.vendor === "mikrotik").automatic_voucher_activation, false);
+  assert.equal(vendors.find((item) => item.vendor === "tp_link").status, "planned");
+  assert.equal(vendors.find((item) => item.vendor === "other").status, "assessment_required");
+  assert.ok(vendors.every((item) => item.requirements.length > 10));
 });
