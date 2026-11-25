@@ -1,4 +1,5 @@
 import { listRouterAdapters, listRouterVendorProfiles } from "./router-adapters.js";
+import { listVendorIntegrationOptions } from "./router-adapter-contract.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 
@@ -67,7 +68,7 @@ async function handleApi(request, env) {
   const path = url.pathname;
 
   if (request.method === "GET" && path === "/api/router-adapters") {
-    return json({ adapters: listRouterAdapters(), vendors: listRouterVendorProfiles() });
+    return json({ adapters: listRouterAdapters(), vendors: listRouterVendorProfiles(), integrations: { ubiquiti: listVendorIntegrationOptions("ubiquiti"), tp_link: listVendorIntegrationOptions("tp_link"), huawei: listVendorIntegrationOptions("huawei") } });
   }
 
   if (request.method === "GET" && path === "/api/health") {
