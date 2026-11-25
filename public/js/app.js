@@ -1398,28 +1398,37 @@ async function loadRouterCompatibilityNotice() {
   const notice = $("router-compatibility-status");
   const vendorSelect = document.querySelector('#business-onboarding select[name="router_vendor"]');
   if (!notice || !vendorSelect) return;
-  const descriptions = {
-    mikrotik: "MikroTik: pilot connector. The software agent exists, but automatic customer access must still be tested on the exact router model and RouterOS version.",
-    ubiquiti: "Ubiquiti: not yet supported for automatic voucher activation. A model-specific controller/API adapter and hardware tests are required.",
-    tp_link: "TP-Link: not yet supported for automatic voucher activation. Some models work only with a compatible Omada controller; exact model/controller support must be verified.",
-    huawei: "Huawei: not yet supported for automatic voucher activation. Support depends on the exact router/controller and available integration interface.",
-    other: "Other router: compatibility must be assessed using the exact manufacturer, model, firmware and hotspot/controller features."
+  let profiles = [];
+  const fallback = {
+    mikrotik: "Pilot connector; exact router model and RouterOS version still require physical acceptance tests.",
+    ubiquiti: "Not yet supported for automatic voucher activation; a tested controller/API adapter is required.",
+    tp_link: "Not yet supported for automatic voucher activation; compatibility may depend on an Omada controller and exact model.",
+    huawei: "Not yet supported for automatic voucher activation; exact device/controller API or RADIUS capability must be verified.",
+    other: "Compatibility assessment required. Exact manufacturer, model, firmware and hotspot/controller details are needed."
   };
   const update = () => {
-    notice.textContent = descriptions[vendorSelect.value] || descriptions.other;
+    const profile = profiles.find((item) => item.vendor === vendorSelect.value);
+    if (!profile) {
+      notice.textContent = fallback[vendorSelect.value] || fallback.other;
+      return;
+    }
+    const statusLabel = {
+      pilot: "PILOT — hardware testing required",
+      planned: "PLANNED — not yet available",
+      limited: "LIMITED — portal redirect only",
+      assessment_required: "ASSESSMENT REQUIRED"
+    }[profile.status] || String(profile.status).toUpperCase();
+    notice.textContent = statusLabel + ". " + profile.requirements +
+      (profile.automatic_voucher_activation ? " Automatic voucher activation is enabled for this profile." : " Automatic voucher activation is not enabled for this profile.");
   };
   vendorSelect.addEventListener("change", update);
   update();
   try {
     const result = await api("/api/router-adapters");
-    const adapters = Array.isArray(result.adapters) ? result.adapters : [];
-    const mikrotik = adapters.find((item) => item.id === "mikrotik-routeros-agent");
-    if (mikrotik && mikrotik.status !== "pilot") {
-      descriptions.mikrotik = "MikroTik connector status: " + mikrotik.status + ". Check the compatibility catalogue before installation.";
-      update();
-    }
+    profiles = Array.isArray(result.vendors) ? result.vendors : [];
+    update();
   } catch {
-    // Keep the conservative built-in compatibility guidance visible if the catalogue is offline.
+    // Keep conservative compatibility guidance visible if the catalogue is offline.
   }
 }
 
