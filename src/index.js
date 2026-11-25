@@ -1,4 +1,4 @@
-import { listRouterAdapters } from "./router-adapters.js";
+import { listRouterAdapters, listRouterVendorProfiles } from "./router-adapters.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 
@@ -67,7 +67,7 @@ async function handleApi(request, env) {
   const path = url.pathname;
 
   if (request.method === "GET" && path === "/api/router-adapters") {
-    return json({ adapters: listRouterAdapters() });
+    return json({ adapters: listRouterAdapters(), vendors: listRouterVendorProfiles() });
   }
 
   if (request.method === "GET" && path === "/api/health") {
