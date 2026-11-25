@@ -9,7 +9,7 @@ const html = read("../public/index.html");
 const migration = read("../database/chat_attachments_realtime.sql");
 
 test("chat subscribes to participant-scoped Postgres changes", () => {
-  assert.match(chat, /@supabase\/supabase-js@2\.99\.1/);
+  assert.match(chat, /@supabase\/supabase-js@2\.119\.2/);
   assert.match(chat, /client\.realtime\.setAuth\(session\.access_token\)/);
   assert.match(chat, /table: "chat_messages", filter: "conversation_id=eq\."/);
   assert.match(chat, /realtimeStatus !== "SUBSCRIBED"/);
