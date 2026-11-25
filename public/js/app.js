@@ -1394,6 +1394,35 @@ $("signout").addEventListener("click", signOut);
 $("onboarding-signout").addEventListener("click", signOut);
 $("platform-signout").addEventListener("click", signOut);
 
+async function loadRouterCompatibilityNotice() {
+  const notice = $("router-compatibility-status");
+  const vendorSelect = document.querySelector('#business-onboarding select[name="router_vendor"]');
+  if (!notice || !vendorSelect) return;
+  const descriptions = {
+    mikrotik: "MikroTik: pilot connector. The software agent exists, but automatic customer access must still be tested on the exact router model and RouterOS version.",
+    ubiquiti: "Ubiquiti: not yet supported for automatic voucher activation. A model-specific controller/API adapter and hardware tests are required.",
+    tp_link: "TP-Link: not yet supported for automatic voucher activation. Some models work only with a compatible Omada controller; exact model/controller support must be verified.",
+    huawei: "Huawei: not yet supported for automatic voucher activation. Support depends on the exact router/controller and available integration interface.",
+    other: "Other router: compatibility must be assessed using the exact manufacturer, model, firmware and hotspot/controller features."
+  };
+  const update = () => {
+    notice.textContent = descriptions[vendorSelect.value] || descriptions.other;
+  };
+  vendorSelect.addEventListener("change", update);
+  update();
+  try {
+    const result = await api("/api/router-adapters");
+    const adapters = Array.isArray(result.adapters) ? result.adapters : [];
+    const mikrotik = adapters.find((item) => item.id === "mikrotik-routeros-agent");
+    if (mikrotik && mikrotik.status !== "pilot") {
+      descriptions.mikrotik = "MikroTik connector status: " + mikrotik.status + ". Check the compatibility catalogue before installation.";
+      update();
+    }
+  } catch {
+    // Keep the conservative built-in compatibility guidance visible if the catalogue is offline.
+  }
+}
+
 (async function init() {
   // Always start in a clean signed-out state. A platform-admin panel must
   // never remain visible from a previous page/session render.
@@ -1407,6 +1436,7 @@ $("platform-signout").addEventListener("click", signOut);
   $("chat-panel").classList.add("hidden");
   $("auth-message").textContent = "";
   const savedSession = guideCompleted ? sessionStorage.getItem("eamwifi_session") : null;
+  loadRouterCompatibilityNotice().catch(() => {});
   try {
     const health = await api("/api/health");
     $("connection").textContent = health.ok ? "Service online" : "Service unavailable";
