@@ -105,7 +105,7 @@ package.json                         Scripts and Wrangler dependency
 - Each new business registration must enter a business contact phone and a separate customer payment phone. Payment phone and optional instructions are saved atomically with the business.
 - Owners/admins can update those public details from the business package dashboard. Customers see the pay-to number and instructions on that business's captive portal.
 - Customers pay the business directly. The owner must verify receipt, select the package, record amount/method/reference, and issue the voucher. Automatic confirmation from M-Pesa/Airtel Money/Tigo Pesa is not configured.
-- Registered owners communicate with Super Admin through Help → Support messages. Messages are delivered to the Super Admin inbox, replies return to the owner, and owners can follow up. Platform subscription contact is 0613794448; it is not the business owner's customer payment number.
+- Registered owners communicate with Super Admin through Help → Support messages. Messages are delivered to the Super Admin inbox, replies return to the owner, and owners can follow up. Platform router subscription payment is manual via Airtel Lipa 653740570, recipient ECKSON AMULIKE MWAMPAJA; owners retain the TxID for Super Admin verification. Support calls/SMS/WhatsApp only: 0613794448. The support number is not the payment destination.
 - Router pairing and customer voucher flow are implemented in code, but physical RouterOS, hotspot redirect, walled-garden, time/data exhaustion and reboot/outage tests remain required before production.
 
 ## Super Admin operational checks
