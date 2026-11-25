@@ -78,3 +78,8 @@ Payment provider APIs are not required for this manual-confirmation workflow. EA
 
 ## Release gate
 The platform is multi-router-ready at the architecture level, but a vendor is not production-supported until its adapter and exact hardware/firmware profile pass release acceptance tests. The existing MikroTik integration remains a pilot until physical tests are completed.
+
+
+## Authenticated integration validation endpoint
+
+The Worker exposes `POST /api/router/integration/validate` for an authenticated business session. It validates vendor/integration matching, HTTPS controller URLs, RADIUS hostnames and port ranges, and required metadata. It deliberately returns `saved: false`: this endpoint is not a credential vault and does not create a live controller/RADIUS connection. Secrets are not returned in the response. Do not present a router as connected or provision vouchers through a vendor path until encrypted secret storage, a live adapter, and model/firmware acceptance tests are complete.
