@@ -38,6 +38,19 @@ const ADAPTERS = Object.freeze([
   })
 ]);
 
+
+const VENDOR_PROFILES = Object.freeze([
+  Object.freeze({ vendor: "mikrotik", label: "MikroTik", adapter_id: "mikrotik-routeros-agent", status: "pilot", automatic_voucher_activation: false, requirements: "RouterOS 7 agent pairing and exact model/firmware hardware acceptance tests." }),
+  Object.freeze({ vendor: "ubiquiti", label: "Ubiquiti", adapter_id: "controller-api", status: "planned", automatic_voucher_activation: false, requirements: "A supported UniFi/UISP controller API driver and model-specific acceptance tests." }),
+  Object.freeze({ vendor: "tp_link", label: "TP-Link", adapter_id: "controller-api", status: "planned", automatic_voucher_activation: false, requirements: "A compatible Omada controller/API and model-specific acceptance tests; standalone consumer routers are not assumed compatible." }),
+  Object.freeze({ vendor: "huawei", label: "Huawei", adapter_id: "controller-api", status: "planned", automatic_voucher_activation: false, requirements: "Exact device/controller family, firmware and supported API or RADIUS capability must be verified." }),
+  Object.freeze({ vendor: "other", label: "Other", adapter_id: null, status: "assessment_required", automatic_voucher_activation: false, requirements: "Provide manufacturer, exact model, firmware and hotspot/controller details for compatibility assessment." })
+]);
+
+export function listRouterVendorProfiles() {
+  return VENDOR_PROFILES.map((profile) => ({ ...profile }));
+}
+
 export function listRouterAdapters() {
   return ADAPTERS.map((adapter) => ({ ...adapter, capabilities: [...adapter.capabilities] }));
 }
