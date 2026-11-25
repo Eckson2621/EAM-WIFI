@@ -10,7 +10,7 @@
 /system script add name="eam-wifi-agent" policy=read,write,test,ftp,policy,password,sensitive source={
   :local EAM_WIFI_TOKEN "__EAM_WIFI_TOKEN__"
   :local EAM_WIFI_BASE "https://wifi.eckson.workers.dev"
-  :local jsonHeaders ("Authorization: Bearer " . $EAM_WIFI_TOKEN, "Content-Type: application/json")
+  # RouterOS Fetch expects http-header-field as one comma-separated string, not an array.\n  :local jsonHeaders ("Authorization: Bearer " . $EAM_WIFI_TOKEN . ",Content-Type: application/json")
   :local heartbeat
   :local hbData
   :onerror hbErr in={
