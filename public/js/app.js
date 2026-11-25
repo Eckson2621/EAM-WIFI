@@ -658,9 +658,24 @@ async function loadWorkspace() {
           <label>Router name<input name="router_name" required minlength="2" maxlength="100" placeholder="Router 2"></label>
           <label>Router brand<select name="router_vendor"><option value="mikrotik">MikroTik</option><option value="ubiquiti">Ubiquiti</option><option value="tp_link">TP-Link</option><option value="huawei">Huawei</option><option value="other">Other</option></select></label>
           <label>Router model<input name="router_model" maxlength="100" placeholder="Optional model"></label>
+          <p class="muted small" data-compat-note role="status">MikroTik pilot: exact model and firmware testing required before automatic voucher activation.</p>
           <div class="package-form-actions"><button class="primary" type="submit">Register router</button><small class="muted" data-feedback>Each router costs TSh 7,500 per month. A 5-minute test starts when the router first connects.</small></div>
         `;
         addRouterButton.addEventListener("click", () => { addRouterForm.hidden = !addRouterForm.hidden; });
+
+        const routerCompatibilityMessages = {
+          mikrotik: "PILOT: RouterOS agent exists; exact model and firmware still require hardware acceptance tests.",
+          ubiquiti: "PLANNED: automatic voucher activation is not available until a tested controller/API adapter exists.",
+          tp_link: "PLANNED: compatibility may require an Omada controller; standalone models are not assumed compatible.",
+          huawei: "PLANNED: exact model, firmware and controller/API or RADIUS support must be verified.",
+          other: "ASSESSMENT REQUIRED: exact manufacturer, model, firmware and hotspot/controller details are needed."
+        };
+        const addRouterVendor = addRouterForm.querySelector('select[name="router_vendor"]');
+        const addRouterCompatibility = addRouterForm.querySelector("[data-compat-note]");
+        addRouterVendor.addEventListener("change", () => {
+          addRouterCompatibility.textContent = routerCompatibilityMessages[addRouterVendor.value] || routerCompatibilityMessages.other;
+        });
+
         addRouterForm.addEventListener("submit", async (event) => {
           event.preventDefault();
           const submit = addRouterForm.querySelector('button[type="submit"]');
