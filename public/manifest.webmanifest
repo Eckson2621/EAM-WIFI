@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "EAM-WIFI Hotspot Management",
+  "short_name": "EAM-WIFI",
+  "description": "EAM-WIFI Hotspot Management — official web app.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#101b33",
+  "theme_color": "#101b33",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
