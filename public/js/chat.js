@@ -6,6 +6,11 @@
   let activeConversation = null;
   let refreshTimer = null;
   let initialized = false;
+  let realtimeClient = null;
+  let realtimeChannel = null;
+  let realtimeConversationId = null;
+  let realtimeStatus = "DISCONNECTED";
+  let realtimeRefreshQueued = false;
 
   async function api(path, options = {}) {
     const saved = sessionStorage.getItem("eamwifi_session");
@@ -13,7 +18,7 @@
     if (!session?.access_token) throw new Error("Please sign in again.");
     const headers = new Headers(options.headers || {});
     headers.set("authorization", "Bearer " + session.access_token);
-    if (options.body) headers.set("content-type", "application/json");
+    if (options.body && !(options.body instanceof FormData)) headers.set("content-type", "application/json");
     const response = await fetch(path, { ...options, headers });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || data.msg || data.error_description || data.error || "Request failed (" + response.status + ")");
@@ -86,7 +91,9 @@
   async function loadMessages() {
     if (!activeConversation) return;
     const host = $("chat-messages");
-    const messages = await api("/api/chat/messages?conversation_id=" + encodeURIComponent(activeConversation.id));
+    const conversationId = activeConversation.id;
+    const messages = await api("/api/chat/messages?conversation_id=" + encodeURIComponent(conversationId));
+    if (activeConversation?.id !== conversationId) return;
     host.replaceChildren();
     if (!messages.length) {
       const empty = document.createElement("p");
@@ -94,18 +101,57 @@
       empty.textContent = "No messages yet. Say hello.";
       host.append(empty);
     }
-    messages.forEach(message => {
+    for (const message of messages) {
       const bubble = document.createElement("article");
       bubble.className = "chat-bubble" + (message.sender_id === currentUser.id ? " mine" : "");
-      const body = document.createElement("p");
-      body.textContent = message.deleted_at ? "This message was deleted." : message.body;
+      if (message.deleted_at) {
+        const deleted = document.createElement("p");
+        deleted.textContent = "This message was deleted.";
+        bubble.append(deleted);
+      } else if (message.message_type === "image" || message.message_type === "file") {
+        if (message.body) {
+          const caption = document.createElement("p");
+          caption.textContent = message.body;
+          bubble.append(caption);
+        }
+        try {
+          const attachment = await api("/api/chat/attachment?path=" + encodeURIComponent(message.media_path));
+          if (message.message_type === "image") {
+            const preview = document.createElement("img");
+            preview.src = attachment.url;
+            preview.alt = message.attachment_name || "Chat image";
+            preview.loading = "lazy";
+            preview.className = "chat-attachment-image";
+            bubble.append(preview);
+          }
+          const link = document.createElement("a");
+          link.href = attachment.url;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "📎 " + (message.attachment_name || "Open attachment");
+          link.className = "chat-attachment-link";
+          bubble.append(link);
+          const size = document.createElement("small");
+          size.textContent = Math.max(1, Math.round((message.attachment_size_bytes || 0) / 1024)) + " KB";
+          bubble.append(size);
+        } catch {
+          const unavailable = document.createElement("p");
+          unavailable.className = "muted small";
+          unavailable.textContent = "Attachment unavailable or your access has expired.";
+          bubble.append(unavailable);
+        }
+      } else {
+        const body = document.createElement("p");
+        body.textContent = message.body || "";
+        bubble.append(body);
+      }
       const meta = document.createElement("small");
       meta.textContent = (message.sender_id === currentUser.id ? "You" : "Participant " + message.sender_id.slice(0, 8)) + " · " + new Date(message.created_at).toLocaleString();
-      bubble.append(body, meta);
+      bubble.append(meta);
       host.append(bubble);
-    });
+    }
     host.scrollTop = host.scrollHeight;
-    await api("/api/chat/read", { method: "POST", body: JSON.stringify({ conversation_id: activeConversation.id }) });
+    await api("/api/chat/read", { method: "POST", body: JSON.stringify({ conversation_id: conversationId }) });
   }
 
   async function openConversation(conversation) {
@@ -121,6 +167,53 @@
     $("chat-send").disabled = false;
     await loadConversations();
     await loadMessages();
+    await connectRealtime(conversation.id);
+  }
+
+  async function connectRealtime(conversationId) {
+    if (!conversationId || !currentUser) return;
+    const saved = sessionStorage.getItem("eamwifi_session");
+    const session = saved ? JSON.parse(saved) : null;
+    if (!session?.access_token) return;
+    if (realtimeConversationId === conversationId && realtimeChannel && realtimeStatus === "SUBSCRIBED") return;
+    if (realtimeClient && realtimeChannel) {
+      try { await realtimeClient.removeChannel(realtimeChannel); } catch { /* reconnect below */ }
+    }
+    realtimeClient = null;
+    realtimeChannel = null;
+    realtimeConversationId = conversationId;
+    realtimeStatus = "CONNECTING";
+    try {
+      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.99.1/+esm");
+      const client = createClient("https://jvzjzmfnxytryzpylrqj.supabase.co", "sb_publishable_Ajn7XOxAkv00DmrXOG-YDA__-b2FVt8", {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+        realtime: { params: { eventsPerSecond: 10 } }
+      });
+      await client.realtime.setAuth(session.access_token);
+      realtimeClient = client;
+      realtimeChannel = client.channel("eam-chat-" + conversationId)
+        .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages", filter: "conversation_id=eq." + conversationId }, () => {
+          if (realtimeRefreshQueued) return;
+          realtimeRefreshQueued = true;
+          Promise.resolve().then(async () => {
+            realtimeRefreshQueued = false;
+            if (!document.hidden && activeConversation?.id === conversationId) {
+              try { await loadMessages(); await loadConversations(); } catch (error) { setFeedback("chat-feedback", error.message); }
+            }
+          });
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "chat_participants", filter: "conversation_id=eq." + conversationId }, async () => {
+          try { await loadConversations(); } catch { /* transient refresh failure */ }
+        })
+        .subscribe(status => {
+          realtimeStatus = status;
+          if (status === "SUBSCRIBED") setFeedback("chat-feedback", "Live connection active · Ujumbe unaingia moja kwa moja.", false);
+          else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setFeedback("chat-feedback", "Live connection interrupted. Automatic refresh is active.", true);
+        });
+    } catch (error) {
+      realtimeStatus = "CHANNEL_ERROR";
+      setFeedback("chat-feedback", "Live connection unavailable; automatic refresh will continue. " + (error.message || ""), true);
+    }
   }
 
   async function createConversation() {
@@ -170,12 +263,25 @@
     $("chat-send-form").addEventListener("submit", async event => {
       event.preventDefault();
       const input = $("chat-message-input");
+      const fileInput = $("chat-attachment-input");
       const button = $("chat-send");
       const body = input.value.trim();
-      if (!activeConversation || !body) return;
+      const file = fileInput.files?.[0];
+      if (!activeConversation || (!body && !file)) return;
       button.disabled = true;
       try {
-        await api("/api/chat/messages", { method: "POST", body: JSON.stringify({ conversation_id: activeConversation.id, body }) });
+        if (file) {
+          if (file.size > 15 * 1024 * 1024) throw new Error("Attachment must not exceed 15 MB.");
+          const form = new FormData();
+          form.append("conversation_id", activeConversation.id);
+          form.append("body", body);
+          form.append("file", file);
+          setFeedback("chat-feedback", "Uploading attachment…", false);
+          await api("/api/chat/attachments", { method: "POST", body: form });
+          fileInput.value = "";
+        } else {
+          await api("/api/chat/messages", { method: "POST", body: JSON.stringify({ conversation_id: activeConversation.id, body }) });
+        }
         input.value = "";
         await loadMessages();
         await loadConversations();
@@ -212,6 +318,7 @@
       if (activeConversation && conversations.some(c => c.id === activeConversation.id)) {
         activeConversation = conversations.find(c => c.id === activeConversation.id);
         await loadMessages();
+        await connectRealtime(activeConversation.id);
       } else {
         activeConversation = null;
         $("chat-thread-head").innerHTML = "<strong>Select a conversation</strong>";
@@ -227,7 +334,7 @@
       if (!document.hidden && currentUser) {
         try { await loadConversations(); if (activeConversation) await loadMessages(); } catch { /* transient network issue */ }
       }
-    }, 12000);
+    }, 45000);
   }
 
   window.EAMChat = { start };
