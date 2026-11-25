@@ -1415,45 +1415,47 @@ async function loadRouterCompatibilityNotice() {
   const integrationSelect = document.querySelector('#business-onboarding select[name="integration_type"]');
   if (!notice || !vendorSelect) return;
   let profiles = [];
-  const fallback = {
-    mikrotik: "Pilot connector; exact router model and RouterOS version still require physical acceptance tests.",
-    ubiquiti: "Not yet supported for automatic voucher activation; a tested controller/API adapter is required.",
-    tp_link: "Not yet supported for automatic voucher activation; compatibility may depend on an Omada controller and exact model.",
-    huawei: "Not yet supported for automatic voucher activation; exact device/controller API or RADIUS capability must be verified.",
-    other: "Compatibility assessment required. Exact manufacturer, model, firmware and hotspot/controller details are needed."
+  let integrations = {};
+  const staticOptions = {
+    mikrotik: [
+      { id: "mikrotik_hotspot", label: "MikroTik Hotspot · pilot", notes: "RouterOS 7 agent; physical hardware acceptance tests are still required." },
+      { id: "routeros_api", label: "RouterOS API · not enabled", notes: "Direct API provisioning is not enabled." }
+    ],
+    other: [{ id: "manual", label: "Manual setup · no automatic voucher activation", notes: "Manual configuration only; no automated voucher activation." }]
   };
   const update = () => {
+    const vendor = vendorSelect.value;
+    const profile = profiles.find((item) => item.vendor === vendor);
     if (integrationSelect) {
-      const mikrotikOption = integrationSelect.querySelector('option[value="mikrotik_hotspot"]');
-      if (mikrotikOption) mikrotikOption.hidden = vendorSelect.value !== "mikrotik";
-      if (vendorSelect.value !== "mikrotik" && integrationSelect.value === "mikrotik_hotspot") integrationSelect.value = "other";
-      if (vendorSelect.value === "mikrotik" && integrationSelect.value === "other") integrationSelect.value = "mikrotik_hotspot";
-    }
-    const profile = profiles.find((item) => item.vendor === vendorSelect.value);
-    if (!profile) {
-      notice.textContent = fallback[vendorSelect.value] || fallback.other;
+      const configured = integrations[vendor]?.integrations || staticOptions[vendor] || staticOptions.other;
+      const current = integrationSelect.value;
+      integrationSelect.replaceChildren();
+      configured.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = item.label;
+        integrationSelect.append(option);
+      });
+      const selected = configured.some((item) => item.id === current) ? current : configured[0].id;
+      integrationSelect.value = selected;
+      const selectedIntegration = configured.find((item) => item.id === selected);
+      const details = selectedIntegration?.notes || "Exact device and firmware compatibility must be checked.";
+      const statusLabel = profile?.status === "pilot" ? "PILOT" : profile?.status === "planned" ? "PLANNED — NOT PRODUCTION READY" : "ASSESSMENT REQUIRED";
+      notice.textContent = statusLabel + ". " + (profile?.requirements || "Exact manufacturer, model and firmware details are required.") + " Setup path: " + details + " Automatic voucher activation remains disabled until the exact hardware passes testing.";
       return;
     }
-    const statusLabel = {
-      pilot: "PILOT — hardware testing required",
-      planned: "PLANNED — not yet available",
-      limited: "LIMITED — portal redirect only",
-      assessment_required: "ASSESSMENT REQUIRED"
-    }[profile.status] || String(profile.status).toUpperCase();
-    notice.textContent = statusLabel + ". " + profile.requirements +
-      (profile.automatic_voucher_activation ? " Automatic voucher activation is enabled for this profile." : " Automatic voucher activation is not enabled for this profile.");
+    notice.textContent = "Select the exact model and firmware for compatibility assessment.";
   };
   vendorSelect.addEventListener("change", update);
-  update();
   try {
     const result = await api("/api/router-adapters");
     profiles = Array.isArray(result.vendors) ? result.vendors : [];
-    update();
+    integrations = result.integrations || {};
   } catch {
-    // Keep conservative compatibility guidance visible if the catalogue is offline.
+    // Keep conservative local options if the catalogue cannot be reached.
   }
+  update();
 }
-
 (async function init() {
   // Always start in a clean signed-out state. A platform-admin panel must
   // never remain visible from a previous page/session render.
