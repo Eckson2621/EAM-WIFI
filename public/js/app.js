@@ -265,7 +265,9 @@ function saveSession(value) {
   else sessionStorage.removeItem("eamwifi_session");
 }
 
-const PLATFORM_PHONE = "0613794448";
+const PLATFORM_CONTACT_PHONE = "0613794448";
+const PLATFORM_LIPA_NUMBER = "653740570";
+const PLATFORM_LIPA_NAME = "ECKSON AMULIKE MWAMPAJA";
 function createRouterPaymentNotice(router) {
   const raw = router.router_subscriptions;
   const sub = Array.isArray(raw) ? raw[0] : raw;
@@ -283,14 +285,11 @@ function createRouterPaymentNotice(router) {
   const detail = document.createElement("p");
   detail.textContent = trialRunning ? "Una muda wa kujaribu muunganisho. Baada ya hapo router itafungwa mpaka malipo yathibitishwe." : trialStarted ? "Router imefungwa. Lipa TSh 7,500/= kisha piga simu au tuma SMS kwa Super Admin." : "Dakika 5 za majaribio zitaanza router itakapounganishwa kwa mara ya kwanza. Baada ya hapo lipa TSh 7,500/= kwa router.";
   const price = document.createElement("strong"); price.textContent = "LIPA TSh 7,500/= kwa router";
-  const phone = document.createElement("p"); phone.textContent = "Namba ya malipo: " + PLATFORM_PHONE + " · Piga simu au tuma SMS kuthibitisha malipo.";
-  const actions = document.createElement("div"); actions.style.cssText = "display:flex;gap:14px;flex-wrap:wrap";
-  const call = document.createElement("a"); call.href = "tel:" + PLATFORM_PHONE; call.textContent = "Piga simu";
-  const sms = document.createElement("a"); sms.href = "sms:" + PLATFORM_PHONE + "?body=" + encodeURIComponent("Nimelipia EAM-WIFI TSh 7,500 kwa router ID " + router.id + ". Tafadhali thibitisha malipo."); sms.textContent = "Tuma SMS";
-  actions.append(call, sms);
+  const phone = document.createElement("p"); phone.textContent = "Airtel Lipa: " + PLATFORM_LIPA_NUMBER + " · Jina la mpokeaji: " + PLATFORM_LIPA_NAME + ". Hifadhi TxID kwa uthibitisho wa Super Admin.";
+
   const timer = document.createElement("small");
-  if (trialRunning) { timer.dataset.trialExpires = String(trialExpiry); panel.append(heading, detail, timer, price, phone, actions); }
-  else panel.append(heading, detail, price, phone, actions);
+  if (trialRunning) { timer.dataset.trialExpires = String(trialExpiry); panel.append(heading, detail, timer, price, phone); }
+  else panel.append(heading, detail, price, phone);
   return panel;
 }
 setInterval(() => {
@@ -306,14 +305,14 @@ function setPlatformCallNotice(element, message) {
   const actions = document.createElement("div");
   actions.style.cssText = "display:flex;gap:14px;flex-wrap:wrap;margin-top:8px";
   const call = document.createElement("a");
-  call.href = "tel:" + PLATFORM_PHONE;
+  call.href = "tel:" + PLATFORM_CONTACT_PHONE;
   call.textContent = "Piga simu · Call";
   call.className = "portal-link";
   const sms = document.createElement("a");
-  sms.href = "sms:" + PLATFORM_PHONE + "?body=" + encodeURIComponent("Habari Super Admin, nimejisajili EAM-WIFI. Tafadhali nisaidie kuhusu idhini ya akaunti yangu.");
+  sms.href = "sms:" + PLATFORM_CONTACT_PHONE + "?body=" + encodeURIComponent("Habari Super Admin, nimejisajili EAM-WIFI. Tafadhali nisaidie kuhusu idhini ya akaunti yangu.");
   sms.textContent = "Tuma SMS";
   sms.className = "portal-link";
-  const waNumber = PLATFORM_PHONE.replace(/\\D/g, "").replace(/^0/, "255");
+  const waNumber = PLATFORM_CONTACT_PHONE.replace(/\\D/g, "").replace(/^0/, "255");
   const whatsapp = document.createElement("a");
   whatsapp.href = "https://wa.me/" + waNumber + "?text=" + encodeURIComponent("Habari Super Admin, nimejisajili EAM-WIFI. Tafadhali nisaidie kuhusu idhini ya akaunti yangu.");
   whatsapp.target = "_blank";
