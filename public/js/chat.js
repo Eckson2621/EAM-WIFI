@@ -187,7 +187,7 @@
     realtimeAccessToken = session.access_token;
     realtimeStatus = "CONNECTING";
     try {
-      const { createClient } = await import("https://cdn.jsdelivr.net/npm/supabase/supabase-js@2.119.2/+esm");
+      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm");
       const client = createClient("https://jvzjzmfnxytryzpylrqj.supabase.co", "sb_publishable_Ajn7XOxAkv00DmrXOG-YDA__-b2FVt8", {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
         realtime: { params: { eventsPerSecond: 10 } }
