@@ -359,3 +359,18 @@ test("signup fails closed when the breached-password service is unavailable", as
     assert.equal(calls, 1);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+
+test("public router adapter catalogue exposes honest integration readiness without authentication", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/router-adapters"), {});
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.ok(Array.isArray(body.adapters));
+  const mikrotik = body.adapters.find((item) => item.id === "mikrotik-routeros-agent");
+  const radius = body.adapters.find((item) => item.id === "radius");
+  const portal = body.adapters.find((item) => item.id === "external-portal");
+  assert.equal(mikrotik.status, "pilot");
+  assert.equal(radius.status, "planned");
+  assert.equal(portal.status, "limited");
+  assert.ok(!JSON.stringify(body).toLowerCase().includes("secret"));
+});
