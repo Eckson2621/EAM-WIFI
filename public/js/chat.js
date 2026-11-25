@@ -205,13 +205,22 @@
             }
           });
         })
-        .on("postgres_changes", { event: "*", schema: "public", table: "chat_participants", filter: "conversation_id=eq." + conversationId }, async () => {
+        .on("postgres_changes", { event: "*", schema: "public", table: "chat_participants", filter: "user_id=eq." + currentUser.id }, async () => {
           try { await loadConversations(); } catch { /* transient refresh failure */ }
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations" }, async () => {
+          try { await loadConversations(); } catch { /* RLS limits rows to conversations this user may see */ }
         })
         .subscribe(status => {
           realtimeStatus = status;
-          if (status === "SUBSCRIBED") setFeedback("chat-feedback", "Live connection active · Ujumbe unaingia moja kwa moja.", false);
-          else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setFeedback("chat-feedback", "Live connection interrupted. Automatic refresh is active.", true);
+          if (status === "SUBSCRIBED") {
+            setFeedback("chat-feedback", "Live connection active · Ujumbe unaingia moja kwa moja.", false);
+            if (!document.hidden && activeConversation?.id === conversationId) {
+              loadMessages().then(loadConversations).catch(error => setFeedback("chat-feedback", error.message));
+            }
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+            setFeedback("chat-feedback", "Live connection interrupted. Automatic refresh is active.", true);
+          }
         });
     } catch (error) {
       realtimeStatus = "CHANNEL_ERROR";
