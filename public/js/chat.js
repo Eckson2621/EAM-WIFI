@@ -312,7 +312,7 @@
     memberships = Array.isArray(userMemberships) ? userMemberships : [];
     const isAdmin = (user.email || "").toLowerCase() === "mwalimueckson2104@gmail.com";
     $("chat-panel").classList.toggle("hidden", !isAdmin && !memberships.some(m => m.status === "active"));
-    if ($("chat-panel").classList.contains("hidden")) return;
+    if ($("chat-panel").classList.contains("hidden")) { await stopRealtime(); return; }
     initializeControls(isAdmin);
     const orgSelect = $("chat-organization");
     const previous = orgSelect.value;
